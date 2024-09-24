@@ -1,0 +1,439 @@
+# Copyright (C) 2020 email subscription popup
+# This file is distributed under the same license as the email subscription popup package.
+msgid ""
+msgstr ""
+"Project-Id-Version: email subscription popup 1.2.15\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/email-subscribe\n"
+"POT-Creation-Date: 2020-09-12 03:30:56+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2020-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+
+#: wp-email-subscription.php:372
+msgid "Email Subscription"
+msgstr ""
+
+#: wp-email-subscription.php:373
+msgid "Email Subscription Form Setting"
+msgstr ""
+
+#: wp-email-subscription.php:374
+msgid "Manage Subscribers"
+msgstr ""
+
+#: wp-email-subscription.php:375
+msgid "Unsubscribers List"
+msgstr ""
+
+#: wp-email-subscription.php:471 wp-email-subscription.php:511
+#: wp-email-subscription.php:536 wp-email-subscription.php:1358
+#: wp-email-subscription.php:2130 wp-email-subscription.php:2182
+#: wp-email-subscription.php:2204 wp-email-subscription.php:2214
+#: wp-email-subscription.php:2369
+msgid "Access Denied"
+msgstr ""
+
+#: wp-email-subscription.php:497 wp-email-subscription.php:2156
+msgid "Selected subscribers deleted successfully."
+msgstr ""
+
+#: wp-email-subscription.php:527
+msgid "Selected subscribers successfully re-subscribed."
+msgstr ""
+
+#: wp-email-subscription.php:603
+msgid "Unsubscribers"
+msgstr ""
+
+#: wp-email-subscription.php:643 wp-email-subscription.php:2489
+msgid "Search User"
+msgstr ""
+
+#: wp-email-subscription.php:667 wp-email-subscription.php:673
+#: wp-email-subscription.php:678 wp-email-subscription.php:2514
+#: wp-email-subscription.php:2520 wp-email-subscription.php:2525
+msgid "Email"
+msgstr ""
+
+#: wp-email-subscription.php:684 wp-email-subscription.php:687
+#: wp-email-subscription.php:689 wp-email-subscription.php:700
+#: wp-email-subscription.php:2531 wp-email-subscription.php:2534
+#: wp-email-subscription.php:2536 wp-email-subscription.php:2547
+msgid "Name"
+msgstr ""
+
+#: wp-email-subscription.php:699 wp-email-subscription.php:2546
+msgid "Select All Emails"
+msgstr ""
+
+#: wp-email-subscription.php:754
+msgid "Per Page"
+msgstr ""
+
+#: wp-email-subscription.php:788 wp-email-subscription.php:2641
+msgid ""
+"It is not recommaded to send email to all at once as there is always hosting "
+"server limit for send emails hourly basis. Most of hosting providers allow "
+"250 emails per hour. Please upgrade to pro version and use cron job "
+"newsletter to send email automatically. Do you still want to continue ?"
+msgstr ""
+
+#: wp-email-subscription.php:799
+msgid "Re-subscribe selected subscribers"
+msgstr ""
+
+#: wp-email-subscription.php:799 wp-email-subscription.php:2652
+msgid "Delete Selected Subscribers"
+msgstr ""
+
+#: wp-email-subscription.php:811
+msgid "No Email Unsubscribers Found"
+msgstr ""
+
+#: wp-email-subscription.php:820 wp-email-subscription.php:1986
+#: wp-email-subscription.php:2702
+msgid "Access All Themes In One Price"
+msgstr ""
+
+#: wp-email-subscription.php:829 wp-email-subscription.php:1995
+#: wp-email-subscription.php:2711
+msgid "Google For Business"
+msgstr ""
+
+#: wp-email-subscription.php:960 wp-email-subscription.php:2839
+msgid "Please select atleast one email."
+msgstr ""
+
+#: wp-email-subscription.php:966 wp-email-subscription.php:2845
+msgid "Please select atleast one email to delete."
+msgstr ""
+
+#: wp-email-subscription.php:975
+msgid "Are you sure to delete selected subscribers ?"
+msgstr ""
+
+#: wp-email-subscription.php:1505
+msgid "Settings"
+msgstr ""
+
+#: wp-email-subscription.php:1512
+msgid "Email Lightbox Popup Settings"
+msgstr ""
+
+#: wp-email-subscription.php:1514
+msgid "Show Modal Popup On"
+msgstr ""
+
+#: wp-email-subscription.php:1525
+msgid "Show newsletter modal popup on unique request only on home page"
+msgstr ""
+
+#: wp-email-subscription.php:1528 wp-email-subscription.php:1552
+msgid "Cookie Time :"
+msgstr ""
+
+#: wp-email-subscription.php:1529 wp-email-subscription.php:1553
+msgid "In Days"
+msgstr ""
+
+#: wp-email-subscription.php:1549
+msgid "Show newsletter modal popup on unique request for any page"
+msgstr ""
+
+#: wp-email-subscription.php:1574
+msgid "No, I will use my custom link"
+msgstr ""
+
+#: wp-email-subscription.php:1592
+msgid "To show Newsletter modal Popup On Custom Link Click Use"
+msgstr ""
+
+#: wp-email-subscription.php:1595
+msgid "Example :"
+msgstr ""
+
+#: wp-email-subscription.php:1606
+msgid "Show Name Field In Newsletter Popup ?"
+msgstr ""
+
+#: wp-email-subscription.php:1610 wp-email-subscription.php:1624
+msgid "Select"
+msgstr ""
+
+#: wp-email-subscription.php:1611 wp-email-subscription.php:1625
+msgid "Yes"
+msgstr ""
+
+#: wp-email-subscription.php:1612 wp-email-subscription.php:1626
+msgid "No"
+msgstr ""
+
+#: wp-email-subscription.php:1620
+msgid "Show Checkbox For Terms and Conditions Agreement"
+msgstr ""
+
+#: wp-email-subscription.php:1634
+msgid "Agreement Text"
+msgstr ""
+
+#: wp-email-subscription.php:1638
+msgid "Replace # with your Terms of Service and Privacy Policy full Url."
+msgstr ""
+
+#: wp-email-subscription.php:1664
+msgid "Subscription Form Settings Messages & Label Settings"
+msgstr ""
+
+#: wp-email-subscription.php:1666
+msgid "Heading"
+msgstr ""
+
+#: wp-email-subscription.php:1681
+msgid "Subheading"
+msgstr ""
+
+#: wp-email-subscription.php:1696
+msgid "Email Label"
+msgstr ""
+
+#: wp-email-subscription.php:1711
+msgid "Name Label"
+msgstr ""
+
+#: wp-email-subscription.php:1726
+msgid "Submit Button Label"
+msgstr ""
+
+#: wp-email-subscription.php:1742
+msgid "Errors & validation Messages Settings"
+msgstr ""
+
+#: wp-email-subscription.php:1744
+msgid "Required Field Message"
+msgstr ""
+
+#: wp-email-subscription.php:1759
+msgid "Invalid Email Message"
+msgstr ""
+
+#: wp-email-subscription.php:1774
+msgid "Invalid Request Message"
+msgstr ""
+
+#: wp-email-subscription.php:1789
+msgid "Email Exist Message"
+msgstr ""
+
+#: wp-email-subscription.php:1804
+msgid "Agreement Error"
+msgstr ""
+
+#: wp-email-subscription.php:1819
+msgid "Success Message"
+msgstr ""
+
+#: wp-email-subscription.php:1834
+msgid "Unsubscribe Message"
+msgstr ""
+
+#: wp-email-subscription.php:1849
+msgid "Wait Message"
+msgstr ""
+
+#: wp-email-subscription.php:1865
+msgid "Additional CSS"
+msgstr ""
+
+#: wp-email-subscription.php:1867
+msgid "Add CSS"
+msgstr ""
+
+#: wp-email-subscription.php:1873
+msgid "Don't, use style tag. Just add css"
+msgstr ""
+
+#: wp-email-subscription.php:1883
+msgid "Save Changes"
+msgstr ""
+
+#: wp-email-subscription.php:2096
+msgid "Email sent successfully."
+msgstr ""
+
+#: wp-email-subscription.php:2111
+msgid "Unable to send email to newsletter subscribers."
+msgstr ""
+
+#: wp-email-subscription.php:2169
+msgid "Email queue reseted successfully."
+msgstr ""
+
+#: wp-email-subscription.php:2243 wp-email-subscription.php:2448
+msgid "Send Email To Newsletter Subscribers"
+msgstr ""
+
+#: wp-email-subscription.php:2255
+msgid "Subject"
+msgstr ""
+
+#: wp-email-subscription.php:2262
+msgid "Email From Name"
+msgstr ""
+
+#: wp-email-subscription.php:2265
+msgid "(ex. admin)"
+msgstr ""
+
+#: wp-email-subscription.php:2271
+msgid "Email From"
+msgstr ""
+
+#: wp-email-subscription.php:2274
+msgid "(ex. admin@yoursite.com) "
+msgstr ""
+
+#: wp-email-subscription.php:2280
+msgid "Email To"
+msgstr ""
+
+#: wp-email-subscription.php:2287
+msgid "Email Body"
+msgstr ""
+
+#: wp-email-subscription.php:2293
+msgid ""
+"you can use [user_full_name],[user_email],[unsubscribe_link_plain],"
+"[unsubscribe_link_html] place holder into email content"
+msgstr ""
+
+#: wp-email-subscription.php:2302
+msgid "Send Email"
+msgstr ""
+
+#: wp-email-subscription.php:2489
+msgid "Search Subscribers"
+msgstr ""
+
+#: wp-email-subscription.php:2489
+msgid "Reset Search"
+msgstr ""
+
+#: wp-email-subscription.php:2604
+msgid "Per Page :"
+msgstr ""
+
+#: wp-email-subscription.php:2652
+msgid "Send Email To Selected Subscribers"
+msgstr ""
+
+#: wp-email-subscription.php:2652
+msgid "Send Email To All Subscribers"
+msgstr ""
+
+#: wp-email-subscription.php:2661
+msgid "Emails In Queue"
+msgstr ""
+
+#: wp-email-subscription.php:2669
+msgid "Send Email To Subscribers In Queue"
+msgstr ""
+
+#: wp-email-subscription.php:2669
+msgid "Reset Email Queue"
+msgstr ""
+
+#: wp-email-subscription.php:2684
+msgid "No Email Subscription Found"
+msgstr ""
+
+#: wp-email-subscription.php:2852
+msgid "Are you sure to delete selected subscribers?"
+msgstr ""
+
+#: wp-email-subscription.php:3184
+msgid "Show Name Field"
+msgstr ""
+
+#: wp-email-subscription.php:3189
+msgid "Show Agreement"
+msgstr ""
+
+#: wp-email-subscription.php:3194
+msgid "Heading:"
+msgstr ""
+
+#: wp-email-subscription.php:3199
+msgid "Subheading:"
+msgstr ""
+
+#: wp-email-subscription.php:3203
+msgid "Email Label:"
+msgstr ""
+
+#: wp-email-subscription.php:3208
+msgid "Name Label:"
+msgstr ""
+
+#: wp-email-subscription.php:3213
+msgid "Submit Button Label:"
+msgstr ""
+
+#: wp-email-subscription.php:3218
+msgid "Required Field Message:"
+msgstr ""
+
+#: wp-email-subscription.php:3224
+msgid "Invalid Email Message:"
+msgstr ""
+
+#: wp-email-subscription.php:3229
+msgid "Invalid Request Message:"
+msgstr ""
+
+#: wp-email-subscription.php:3234
+msgid "Email Exist Message:"
+msgstr ""
+
+#: wp-email-subscription.php:3239
+msgid "Success Message:"
+msgstr ""
+
+#: wp-email-subscription.php:3244
+msgid "Wait Message:"
+msgstr ""
+
+#: wp-email-subscription.php:3249
+msgid "Agreement Text:"
+msgstr ""
+
+#: wp-email-subscription.php:3254
+msgid "Agreement Message:"
+msgstr ""
+
+#. Plugin Name of the plugin/theme
+msgid "email subscription popup"
+msgstr ""
+
+#. Plugin URI of the plugin/theme
+msgid ""
+"https://www.i13websolution.com/product/wordpress-newsletter-subscription-pro-"
+"plugin/"
+msgstr ""
+
+#. Description of the plugin/theme
+msgid ""
+"This is beautiful email subscription modal popup plugin for wordpress.Each "
+"time new user visit your site user will see modal popup for email "
+"subscription.Even you can setup email subscription form by widget."
+msgstr ""
+
+#. Author of the plugin/theme
+msgid "I Thirteen Web Solution"
+msgstr ""
+
+#. Author URI of the plugin/theme
+msgid "https://www.i13websolution.com/"
+msgstr ""
