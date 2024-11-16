@@ -5,7 +5,7 @@
   Author URI:https://www.i13websolution.com/
   Description: This is beautiful email subscription modal popup plugin for wordpress.Each time new user visit your site user will see modal popup for email subscription.Even you can setup email subscription form by widget.
   Author:I Thirteen Web Solution
-  Version:1.2.22
+  Version:1.2.23
   Text Domain:email-subscribe
   Domain Path: /languages
  */
@@ -2805,7 +2805,7 @@ function massEmailToEmail_Subscriber_Func() {
                             <li>Subheading="Want to be notified when our article is published? Enter your email address and name below to be the first to know."</li>
                             <li>EmailLabel="Email"</li>
                             <li>NameLabel="Name"</li>
-                            <li>SubmitButtonLabel="UP FOR NEWSLETTER NOW"</li>
+                            <li>SubmitButtonLabel="SIGN UP FOR NEWSLETTER NOW"</li>
                             <li>RequiredFieldMessage="This field is required."</li>
                             <li>InvalidEmailMessage="Please enter valid email address."</li>
                             <li>InvalidRequestMessage="Invalid request."</li>
@@ -2828,22 +2828,22 @@ function print_email_subscribe_form_func($instance) {
     wp_enqueue_script('jquery');
     
      ob_start();
-    $Heading = apply_filters('widget_title', empty($instance['heading']) ? 'Subscribe to our newsletter' : sanitize_text_field($instance['heading']));
-    echo "<h2 class='news_titile_h2'>" . $Heading . "</h2>";
-    $Subheading = empty($instance['subheading']) ? 'Want to be notified when our article is published? Enter your email address and name below to be the first to know.' : sanitize_textarea_field($instance['subheading']);
-    $EmailLabel = empty($instance['emaillabel']) ? 'Email' : sanitize_text_field($instance['emaillabel']);
-    $NameLabel = empty($instance['namelabel']) ? 'Name' : sanitize_text_field($instance['namelabel']);
-    $SubmitButtonLabel = empty($instance['submitbuttonlabel']) ? 'SIGN UP FOR NEWSLETTER NOW' : sanitize_text_field($instance['submitbuttonlabel']);
-    $RequiredFieldMessage = empty($instance['requiredfieldmessage']) ? 'This field is required.' : sanitize_text_field($instance['requiredfieldmessage']);
-    $InvalidEmailMessage = empty($instance['invalidemailmessage']) ? 'Please enter valid email address.' : sanitize_text_field($instance['invalidemailmessage']);
+    $Heading = esc_html(esc_attr(apply_filters('widget_title', empty($instance['heading']) ? 'Subscribe to our newsletter' : sanitize_text_field($instance['heading']))));
+    echo "<h2 class='news_titile_h2'>" . esc_html(esc_attr($Heading)) . "</h2>";
+    $Subheading = esc_html(esc_attr(empty($instance['subheading']) ? 'Want to be notified when our article is published? Enter your email address and name below to be the first to know.' : sanitize_textarea_field($instance['subheading'])));
+    $EmailLabel = esc_html(esc_attr(empty($instance['emaillabel']) ? 'Email' : sanitize_text_field($instance['emaillabel'])));
+    $NameLabel = esc_html(esc_attr(empty($instance['namelabel']) ? 'Name' : sanitize_text_field($instance['namelabel'])));
+    $SubmitButtonLabel = esc_html(esc_attr(empty($instance['submitbuttonlabel']) ? 'SIGN UP FOR NEWSLETTER NOW' : sanitize_text_field($instance['submitbuttonlabel'])));
+    $RequiredFieldMessage = esc_html(esc_attr(empty($instance['requiredfieldmessage']) ? 'This field is required.' : sanitize_text_field($instance['requiredfieldmessage'])));
+    $InvalidEmailMessage = esc_html(esc_attr(empty($instance['invalidemailmessage']) ? 'Please enter valid email address.' : sanitize_text_field($instance['invalidemailmessage'])));
     $InvalidRequestMessage = empty($instance['invalidrequestmessage']) ? 'Invalid request.' : sanitize_text_field($instance['invalidrequestmessage']);
-    $EmailExistMessage = empty($instance['emailexistmessage']) ? 'This email is already exist.' : sanitize_text_field($instance['emailexistmessage']);
-    $SuccessMessage = empty($instance['successmessage']) ? 'You have successfully subscribed to our Newsletter!' : sanitize_text_field($instance['successmessage']);
-    $WaitMessage = empty($instance['waitmessage']) ? 'Please wait...' : sanitize_text_field($instance['waitmessage']);
+    $EmailExistMessage = esc_html(esc_attr(empty($instance['emailexistmessage']) ? 'This email is already exist.' : sanitize_text_field($instance['emailexistmessage'])));
+    $SuccessMessage = esc_html(esc_attr(empty($instance['successmessage']) ? 'You have successfully subscribed to our Newsletter!' : sanitize_text_field($instance['successmessage'])));
+    $WaitMessage = esc_html(esc_attr(empty($instance['waitmessage']) ? 'Please wait...' : sanitize_text_field($instance['waitmessage'])));
     $ShowNameField = empty($instance['shownamefield']) ? 1 : intval($instance['shownamefield']);
     $show_agreement = empty($instance['show_agreement']) ? 0 : intval($instance['show_agreement']);
-    $agreement_text = empty($instance['agreement_text']) ? 'I agree to <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>' : $instance['agreement_text'];
-    $agreement_error = empty($instance['agreement_error']) ? 'Please read and agree to our terms & conditions.' : sanitize_text_field($instance['agreement_error']);
+    $agreement_text = esc_html(esc_attr(empty($instance['agreement_text']) ? 'I agree to <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>' : $instance['agreement_text']));
+    $agreement_error = esc_html(esc_attr(empty($instance['agreement_error']) ? 'Please read and agree to our terms & conditions.' : sanitize_text_field($instance['agreement_error'])));
     $imgUrl = plugin_dir_url(__FILE__) . "images/";
     $loader = $imgUrl . 'AjaxLoader.gif';
     $rand = uniqid('filed_');
