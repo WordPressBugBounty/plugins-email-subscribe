@@ -4,8 +4,8 @@ Tags:wordpress email subscription,Responsive newsletter signup,wordpress newslet
 Donate link: http://www.i13websolution.com/donate_for_mass_email.php
 Requires at least:3.0
 Tested up to:6.7
-Version:1.2.23
-Stable tag:1.2.23
+Version:1.2.24
+Stable tag:1.2.24
 License:GPLv2 or later
 License URI:http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -168,6 +168,11 @@ This plugin is easy to install like other plug-ins of Wordpress as you need to j
 This plugin is free for everyone! Since it's released under the GPL, you can use it free of charge on your personal or commercial blog. But you can make some donations if you realy find it useful.
 
 == Changelog ==
+
+= 1.2.24 =
+
+* Fixed vulnerable SQL
+
 
 = 1.2.23 =
 

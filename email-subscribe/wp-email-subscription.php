@@ -5,7 +5,7 @@
   Author URI:https://www.i13websolution.com/
   Description: This is beautiful email subscription modal popup plugin for wordpress.Each time new user visit your site user will see modal popup for email subscription.Even you can setup email subscription form by widget.
   Author:I Thirteen Web Solution
-  Version:1.2.23
+  Version:1.2.24
   Text Domain:email-subscribe
   Domain Path: /languages
  */
@@ -465,8 +465,12 @@ function email_subscription_unsubscribers_func() {
                     $em = htmlentities(strip_tags(sanitize_email($em)), ENT_QUOTES);
                     if ($em != "") {
 
-                        $query = "delete from  " . $wpdb->prefix . "nl_subscriptions where email='$em'";
-                        $wpdb->query($query);
+                          $tablename='nl_subscriptions';
+                        $wpdb->delete(
+                                $wpdb->prefix.$tablename,
+                                array('email' => $em),
+                                array('%s')
+                        );
                         if (is_array($mass_email_queue)) {
 
                             $key = (int) array_search($em, $mass_email_queue);
@@ -2080,8 +2084,15 @@ function massEmailToEmail_Subscriber_Func() {
                     $em = sanitize_email($em);
                     if ($em != "") {
 
-                        $query = "delete from  " . $wpdb->prefix . "nl_subscriptions where email='$em'";
-                        $wpdb->query($query);
+                        
+                        $tablename='nl_subscriptions';
+                        $wpdb->delete(
+                                $wpdb->prefix.$tablename,
+                                array('email' => $em),
+                                array('%s')
+                        );
+
+                     
                         if (is_array($mass_email_queue)) {
 
                             $key = (int) array_search($em, $mass_email_queue);
