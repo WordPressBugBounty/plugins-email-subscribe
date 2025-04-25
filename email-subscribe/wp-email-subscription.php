@@ -5,7 +5,7 @@
   Author URI:https://www.i13websolution.com/
   Description: This is beautiful email subscription modal popup plugin for wordpress.Each time new user visit your site user will see modal popup for email subscription.Even you can setup email subscription form by widget.
   Author:I Thirteen Web Solution
-  Version:1.2.24
+  Version:1.2.25
   Text Domain:email-subscribe
   Domain Path: /languages
  */
@@ -305,7 +305,8 @@ function install_email_subscription_popup_admin() {
         'show_agreement' => '0',
         'agreement_text' => 'I agree to <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>',
         'agreement_error' => 'Please read and agree to our terms & conditions.',
-        'additional_css' => ''
+        'additional_css' => '',
+        'centerOnScroll' => '0'
     );
 
     $existingopt = get_option('wp_news_letter_settings');
@@ -347,6 +348,11 @@ function install_email_subscription_popup_admin() {
         if (!isset($existingopt['additional_css'])) {
             $flag = true;
             $existingopt['additional_css'] = '';
+        }
+        
+        if (!isset($existingopt['centerOnScroll'])) {
+            $flag = true;
+            $existingopt['centerOnScroll'] = '0';
         }
 
         if ($flag == true) {
@@ -1209,6 +1215,7 @@ function addModalPopupHtmlToWpFooter() {
 
                             'overlayColor': '#000000',
                             'hideOnOverlayClick': false,
+                            <?php if(isset($wp_news_letter_settings['centerOnScroll']) && $wp_news_letter_settings['centerOnScroll']==1):?>'centerOnScroll': true,<?php endif;?>
                             'padding': 10,
                             'autoScale': true,
                             'showCloseButton': true,
@@ -1234,6 +1241,7 @@ function addModalPopupHtmlToWpFooter() {
 
                                         'overlayColor': '#000000',
                                         'hideOnOverlayClick': false,
+                                        <?php if(isset($wp_news_letter_settings['centerOnScroll']) && $wp_news_letter_settings['centerOnScroll']==1):?>'centerOnScroll': true,<?php endif;?>
                                         'padding': 10,
                                         'autoScale': true,
                                         'showCloseButton': true,
@@ -1264,6 +1272,7 @@ function addModalPopupHtmlToWpFooter() {
 
                                         'overlayColor': '#000000',
                                         'hideOnOverlayClick': false,
+                                        <?php if(isset($wp_news_letter_settings['centerOnScroll']) && $wp_news_letter_settings['centerOnScroll']==1):?>'centerOnScroll': true,<?php endif;?>
                                         'padding': 10,
                                         'autoScale': true,
                                         'showCloseButton': true,
@@ -1340,6 +1349,7 @@ function email_subscription_popup_admin_options() {
         $options['success'] = trim(htmlentities(sanitize_text_field($_POST['success']), ENT_QUOTES));
         $options['unsubscribe_message'] = trim(htmlentities(sanitize_text_field($_POST['unsubscribe_message']), ENT_QUOTES));
         $options['show_name_field'] = trim(htmlentities(sanitize_text_field($_POST['show_name_field']), ENT_QUOTES));
+        $options['centerOnScroll'] = trim(htmlentities(sanitize_text_field($_POST['centerOnScroll']), ENT_QUOTES));
         $options['show_agreement'] = trim(htmlentities(sanitize_text_field($_POST['show_agreement']), ENT_QUOTES));
         $options['agreement_text'] = trim(htmlentities(strip_tags(stripslashes($_POST['agreement_text']), '<a><b><p><strong><em><i>'), ENT_QUOTES));
         $options['agreement_error'] = trim(htmlentities(sanitize_text_field($_POST['agreement_error']), ENT_QUOTES));
@@ -1366,6 +1376,10 @@ function email_subscription_popup_admin_options() {
     if (!isset($wp_news_letter_settings['show_name_field'])) {
 
         $wp_news_letter_settings['show_name_field'] = '1';
+    }
+    if (!isset($wp_news_letter_settings['centerOnScroll'])) {
+
+        $wp_news_letter_settings['centerOnScroll'] = '0';
     }
 
     if (!isset($wp_news_letter_settings['show_agreement'])) {
@@ -1565,6 +1579,21 @@ function email_subscription_popup_admin_options() {
                                                                             <option value=""><?php echo __('Select', 'email-subscribe'); ?></option>
                                                                             <option <?php if ($wp_news_letter_settings['show_name_field'] == '1'): ?> selected="selected" <?php endif; ?>  value="1" ><?php echo __('Yes', 'email-subscribe'); ?></option>
                                                                             <option <?php if ($wp_news_letter_settings['show_name_field'] == '0'): ?> selected="selected" <?php endif; ?>  value="0"><?php echo __('No', 'email-subscribe'); ?></option>
+                                                                        </select> 
+                                                                        <div style="clear:both"></div>
+                                                                        <div class="error_label"></div> 
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td class="label" style="width:35%">
+                                                                        <h3 style="font-size: 13px"><label for="centerOnScroll"><?php echo __('Center Newsletter Popup on scroll?', 'email-subscribe'); ?> <span class="required">*</span></label></h3>
+                                                                    </td>
+                                                                    <td class="value" style="width:65%">
+                                                                        <select id="centerOnScroll" name="centerOnScroll" class="select">
+                                                                            <option value=""><?php echo __('Select', 'email-subscribe'); ?></option>
+                                                                            <option <?php if ($wp_news_letter_settings['centerOnScroll'] == '0'): ?> selected="selected" <?php endif; ?>  value="0"><?php echo __('No', 'email-subscribe'); ?></option>
+                                                                            <option <?php if ($wp_news_letter_settings['centerOnScroll'] == '1'): ?> selected="selected" <?php endif; ?>  value="1" ><?php echo __('Yes', 'email-subscribe'); ?></option>
+                                                                           
                                                                         </select> 
                                                                         <div style="clear:both"></div>
                                                                         <div class="error_label"></div> 
