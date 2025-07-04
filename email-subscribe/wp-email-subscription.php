@@ -1,6 +1,6 @@
 <?php
 /*
-  Plugin Name: email subscription popup
+  Plugin Name: Email Subscription Popup
   Plugin URI:https://www.i13websolution.com/product/wordpress-newsletter-subscription-pro-plugin/
   Author URI:https://www.i13websolution.com/
   Description: This is beautiful email subscription modal popup plugin for wordpress.Each time new user visit your site user will see modal popup for email subscription.Even you can setup email subscription form by widget.
