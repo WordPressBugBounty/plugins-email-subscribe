@@ -5,7 +5,7 @@
   Author URI:https://www.i13websolution.com/
   Description: This is beautiful email subscription modal popup plugin for wordpress.Each time new user visit your site user will see modal popup for email subscription.Even you can setup email subscription form by widget.
   Author:I Thirteen Web Solution
-  Version:1.2.25
+  Version:1.2.26
   Text Domain:email-subscribe
   Domain Path: /languages
  */
@@ -2880,8 +2880,8 @@ function print_email_subscribe_form_func($instance) {
     $EmailExistMessage = esc_html(esc_attr(empty($instance['emailexistmessage']) ? 'This email is already exist.' : sanitize_text_field($instance['emailexistmessage'])));
     $SuccessMessage = esc_html(esc_attr(empty($instance['successmessage']) ? 'You have successfully subscribed to our Newsletter!' : sanitize_text_field($instance['successmessage'])));
     $WaitMessage = esc_html(esc_attr(empty($instance['waitmessage']) ? 'Please wait...' : sanitize_text_field($instance['waitmessage'])));
-    $ShowNameField = empty($instance['shownamefield']) ? 1 : intval($instance['shownamefield']);
-    $show_agreement = empty($instance['show_agreement']) ? 0 : intval($instance['show_agreement']);
+    $ShowNameField = array_key_exists('shownamefield', $instance) ? intval($instance['shownamefield']) : 1;
+    $show_agreement = array_key_exists('show_agreement', $instance) ? intval($instance['show_agreement']) : 0;
     $agreement_text = esc_html(esc_attr(empty($instance['agreement_text']) ? 'I agree to <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>' : $instance['agreement_text']));
     $agreement_error = esc_html(esc_attr(empty($instance['agreement_error']) ? 'Please read and agree to our terms & conditions.' : sanitize_text_field($instance['agreement_error'])));
     $imgUrl = plugin_dir_url(__FILE__) . "images/";
