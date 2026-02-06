@@ -16,7 +16,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  */
  
-#fancybox_ns-loading_ {
+#fancybox-loading_ {
 	position: fixed;
 	top: 50%;
 	left: 50%;
@@ -31,13 +31,13 @@
 	display: none;
 }
 
-#fancybox_ns-loading_ div {
+#fancybox-loading_ div {
 	width: 44px;
 	height: 44px;
 	background: url('../images/vl-box/loading.gif') center center no-repeat;
 }
 
-#fancybox_ns-overlay {
+#fancybox-overlay {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -47,7 +47,7 @@
         height:100%;
 }
 
-#fancybox_ns-tmp {
+#fancybox-tmp {
 	padding: 0;
 	margin: 0;
 	border: 0;
@@ -55,7 +55,7 @@
 	display: none;
 }
 
-#fancybox_ns-wrap {
+#fancybox-wrap {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -67,21 +67,21 @@
         box-sizing:content-box;
 }
 
-#fancybox_ns-outer {
+#fancybox-outer {
 	position: relative;
 	width: 100%;
-	height: auto !important;
+	height: auto;
 	background: #fff;
 	-webkit-box-shadow: 0px 0px 15px rgba(0,0,0,0.50);
 	-moz-box-shadow: 0px 0px 15px rgba(0,0,0,0.50);
 	box-shadow: 0px 0px 15px rgba(0,0,0,0.50);
 	filter: progid: DXImageTransform.Microsoft.Blur (pixelradius = 15, enabled = "true"); 
-        /*border: 3px solid #08c;
-        border-radius: 2px;*/
+         border: 6px solid #000;
+        border-radius: 8px;
          box-sizing:content-box;
 }
 
-#fancybox_ns-content {
+#fancybox-content {
 	width: 0;
 	height: 0;
 	padding: 0;
@@ -93,7 +93,7 @@
          box-sizing:content-box;
 }
 
-#fancybox_ns-hide-sel-frame {
+#fancybox-hide-sel-frame {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -103,7 +103,7 @@
 	z-index: 1101;
 }
 
-#fancybox_ns-close {
+#fancybox-close {
 	position: absolute;
 	top: -18px;
 	right: -18px;
@@ -115,14 +115,14 @@
 	display: none;
 }
 
-#fancybox_ns-error {
+#fancybox-error {
 	color: #444;
 	font: normal 12px/20px Arial, Helvetica, sans-serif;
 	padding: 14px;
 	margin: 0;
 }
 
-#fancybox_ns-img {
+#fancybox-img {
 	max-width: 100%;
 	max-height: 100%;
 	padding: 0;
@@ -131,14 +131,14 @@
 	outline: none;
 }
 
-#fancybox_ns-frame {
+#fancybox-frame {
 	width: 100%;
 	height: 100%;
 	border: none;
 	display: block;
 }
 
-#fancybox_ns-left_, #fancybox_ns-right_{
+#fancybox-left_, #fancybox-right_{
 	position: absolute;
 	bottom: 0px;
 	height: 34px;
@@ -151,15 +151,15 @@
         margin-top: -16px;
 }
 
-#fancybox_ns-left_ {
+#fancybox-left_ {
 	left: 0px;
 }
 
-#fancybox_ns-right_ {
+#fancybox-right_ {
 	right: 0px;
 }
 
-#fancybox_ns-left-ico_, #fancybox_ns-right-ico_ {
+#fancybox-left-ico_, #fancybox-right-ico_ {
 	position: absolute;
 	top: 50%;
 	left: -9999px;
@@ -171,31 +171,31 @@
 	display: block;
 }
 
-#fancybox_ns-left-ico_ {
+#fancybox-left-ico_ {
 	background: url('../images/vl-box/controls.png') 0 -36px no-repeat;
 }
 
-#fancybox_ns-right-ico_ {
+#fancybox-right-ico_ {
 	background: url('../images/vl-box/controls.png') 0 -72px no-repeat;
 }
 
-#fancybox_ns-left_:hover span {
+#fancybox-left_:hover span {
 	left: 19px;
 }
 
-#fancybox_ns-right_:hover span {
+#fancybox-right_:hover span {
 	left: auto;
 	right: 19px;
 }
 
-#fancybox_ns-title {
+#fancybox-title {
 	font-family: Arial, Helvetica, sans-serif;
 	font-size: 12px;
 	z-index: 1102;
 	background:#000;
 }
 
-.fancybox_ns-title-inside {
+.fancybox-title-inside {
 	position: relative;
 	padding-bottom: 10px;
 	color: #333;
@@ -203,12 +203,12 @@
 	background: #fff;
 }
 
-.fancybox_ns-title-outside {
+.fancybox-title-outside {
 	/*padding-top: 10px;*/
 	color: #fff;
 }
 
-.fancybox_ns-title-over {
+.fancybox-title-over {
 	position: absolute;
 	bottom: 0;
 	left: 0;
@@ -216,14 +216,14 @@
 	text-align: left;
 }
 
-#fancybox_ns-title-over {
+#fancybox-title-over {
 	display: block;
 	padding: 10px;
 	background-color: #000;
 	background-color: rgba(0,0,0,0.5);	
 }
 
-.fancybox_ns-title-float {
+.fancybox-title-float {
 	position: absolute;
 	bottom: -20px;
 	padding: 6px 12px;
@@ -253,9 +253,7 @@
   z-index: 1;
   background: url("../images/vl-box/player_play.png")  no-repeat center center;
 }
-.fancybox_ns-skin {
+.fancybox-skin {
     background-color: transparent;
     box-shadow: 0 0 0 rgba(0, 0, 0, 0) !important;
 }
-
-

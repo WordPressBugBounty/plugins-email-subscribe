@@ -3,9 +3,9 @@ Contributors:nik00726
 Tags:wordpress email subscription,Responsive newsletter signup,wordpress newsletter popup,newsletter widget,wordpress ,wordpress email subscription plugin popup,newsletter modal popup,wordpress email subscriber,wordpress,wordpress newsletter email
 Donate link: http://www.i13websolution.com/donate_for_mass_email.php
 Requires at least:3.0
-Tested up to:6.8
-Version:1.2.26
-Stable tag:1.2.26
+Tested up to:6.9
+Version:1.2.27
+Stable tag:1.2.27
 License:GPLv2 or later
 License URI:http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -168,6 +168,11 @@ This plugin is easy to install like other plug-ins of Wordpress as you need to j
 This plugin is free for everyone! Since it's released under the GPL, you can use it free of charge on your personal or commercial blog. But you can make some donations if you realy find it useful.
 
 == Changelog ==
+
+= 1.2.27 =
+
+* Fixed XSS Proof of Concept" (PoC).
+
 
 = 1.2.26 =
 
