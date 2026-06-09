@@ -5,15 +5,28 @@
   Author URI:https://www.i13websolution.com/
   Description: This is beautiful email subscription modal popup plugin for wordpress.Each time new user visit your site user will see modal popup for email subscription.Even you can setup email subscription form by widget.
   Author:I Thirteen Web Solution
-  Version:1.2.27
+  Version:1.2.28
   Text Domain:email-subscribe
   Domain Path: /languages
  */
+
+// ── Free version limits & PRO upsell ─────────────────────────────────────────
+define('I13_ES_FREE_SUBSCRIBER_LIMIT', 500);
+define('I13_ES_FREE_IMPORT_LIMIT',     100);
+define('I13_ES_PRO_URL', 'https://i13websolution.com/product/wordpress-newsletter-subscription-pro-plugin/');
 
 add_action('admin_menu', 'email_subscription_popup_admin_menu');
 //add_action( 'admin_init', 'email_subscription_popup_admin_admin_init' );
 register_activation_hook(__FILE__, 'install_email_subscription_popup_admin');
 register_deactivation_hook(__FILE__, 'es_email_subscribe_remove_access_capabilities');
+add_action('admin_notices', 'i13_es_free_admin_notices');
+add_action('admin_notices', 'i13_es_review_reminder_notice');
+add_action('wp_ajax_i13_es_dismiss_review',      'i13_es_dismiss_review');
+add_action('wp_ajax_i13_es_dismiss_upgrade',     'i13_es_dismiss_upgrade');
+add_action('wp_ajax_i13_es_dismiss_onboarding',  'i13_es_dismiss_onboarding');
+add_action('wp_ajax_i13_es_mailchimp_save',      'i13_es_mailchimp_save');
+add_action('wp_ajax_i13_es_mailchimp_test',      'i13_es_mailchimp_test');
+add_action('admin_init',                         'i13_es_maybe_redirect_onboarding');
 add_action('wp_enqueue_scripts', 'email_subscription_popup_load_styles_and_js');
 if (!is_admin()) {
     add_action('wp_footer', 'addModalPopupHtmlToWpFooter');
@@ -32,6 +45,101 @@ add_shortcode('print_email_subscribe_form', 'print_email_subscribe_form_func');
 function force_default_editor_email_subscriber() {
     //allowed: tinymce, html
     return 'tinymce';
+}
+
+// ── Review reminder notice ────────────────────────────────────────────────────
+function i13_es_review_reminder_notice() {
+    // Only show on plugin pages
+    $screen = get_current_screen();
+    if ( !$screen || strpos($screen->id, 'email_subscription') === false ) return;
+
+    // Don't show if dismissed
+    if ( get_option('i13_es_review_dismissed') ) return;
+
+    // Show after 30 days AND 50+ subscribers
+    // In WP_DEBUG mode: show after 1 day and 1 subscriber (for testing)
+    $activated_on = (int) get_option('i13_es_activated_on', time());
+    $days_active  = (time() - $activated_on) / DAY_IN_SECONDS;
+    $min_days = ( defined('WP_DEBUG') && WP_DEBUG ) ? 0 : 30;
+    $min_subs = ( defined('WP_DEBUG') && WP_DEBUG ) ? 1 : 50;
+    if ( $days_active < $min_days ) return;
+
+    global $wpdb;
+    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}nl_subscriptions WHERE is_subscribed=1");
+    if ( $count < $min_subs ) return;
+
+    $review_url = 'https://wordpress.org/support/plugin/email-subscribe/reviews/#new-post';
+    ?>
+    <div class="notice notice-success" id="i13-es-review-notice" style="border-left-color:#00a32a;padding:12px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <span style="font-size:24px;">⭐</span>
+        <div style="flex:1;">
+            <strong><?php _e('Enjoying Email Subscribe?', 'email-subscribe'); ?></strong><br>
+            <?php printf(
+                __('You have <strong>%d subscribers</strong> — that is awesome! Please take a moment to leave a review on WordPress.org. It helps us keep the plugin free and improve it!', 'email-subscribe'),
+                $count
+            ); ?>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="<?php echo esc_url($review_url); ?>" target="_blank" class="button button-primary" onclick="i13EsDismissReview();">
+                ⭐ <?php _e('Leave a Review', 'email-subscribe'); ?>
+            </a>
+            <a href="#" class="button" onclick="i13EsDismissReview();return false;">
+                <?php _e('Already did!', 'email-subscribe'); ?>
+            </a>
+            <a href="#" style="color:#888;font-size:12px;align-self:center;" onclick="i13EsDismissReview();return false;">
+                <?php _e('Dismiss', 'email-subscribe'); ?>
+            </a>
+        </div>
+    </div>
+    <script>
+    function i13EsDismissReview(){
+        document.getElementById('i13-es-review-notice').style.display='none';
+        fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:'action=i13_es_dismiss_review&nonce=<?php echo wp_create_nonce('i13_es_dismiss'); ?>'
+        });
+    }
+    </script>
+    <?php
+}
+
+function i13_es_dismiss_review() {
+    check_ajax_referer('i13_es_dismiss', 'nonce');
+    update_option('i13_es_review_dismissed', 1);
+    wp_send_json_success();
+}
+
+function i13_es_dismiss_upgrade() {
+    check_ajax_referer('i13_es_dismiss', 'nonce');
+    update_option('i13_es_upgrade_dismissed', time());
+    wp_send_json_success();
+}
+
+function i13_es_free_admin_notices() {
+    global $wpdb;
+    $screen = get_current_screen();
+    if ( !$screen || strpos($screen->id, 'email_subscription') === false ) return;
+
+    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}nl_subscriptions WHERE is_subscribed=1");
+
+    // Subscriber limit warning
+    if ( $count >= I13_ES_FREE_SUBSCRIBER_LIMIT ) {
+        echo '<div class="notice notice-warning"><p>';
+        printf(
+            __('<strong>Email Subscribe:</strong> You have <strong>%d active subscribers</strong> — you have reached the free version limit of %d. <a href="%s" target="_blank" style="color:#d63638;font-weight:600;">Upgrade to PRO</a> for unlimited subscribers, more popup styles, ESP integrations and more!', 'email-subscribe'),
+            $count, I13_ES_FREE_SUBSCRIBER_LIMIT, I13_ES_PRO_URL
+        );
+        echo '</p></div>';
+    } elseif ( $count >= (I13_ES_FREE_SUBSCRIBER_LIMIT * 0.8) ) {
+        // 80% warning
+        echo '<div class="notice notice-info"><p>';
+        printf(
+            __('<strong>Email Subscribe:</strong> You have <strong>%d active subscribers</strong> (%d%% of the %d free limit). <a href="%s" target="_blank">Upgrade to PRO</a> for unlimited subscribers!', 'email-subscribe'),
+            $count, round($count/I13_ES_FREE_SUBSCRIBER_LIMIT*100), I13_ES_FREE_SUBSCRIBER_LIMIT, I13_ES_PRO_URL
+        );
+        echo '</p></div>';
+    }
 }
 
 function load_lang_for_email_subscription_popup() {
@@ -267,6 +375,11 @@ function nksnewslettersubscriberSet() {
 
 function install_email_subscription_popup_admin() {
 
+    // Store activation date for review reminder
+    if ( ! get_option('i13_es_activated_on') ) {
+        update_option('i13_es_activated_on', time());
+        update_option('i13_es_show_onboarding', 1); // Show onboarding wizard on first install
+    }
 
     global $wpdb;
     $table_name = $wpdb->prefix . "nl_subscriptions";
@@ -367,11 +480,12 @@ function install_email_subscription_popup_admin() {
 function email_subscription_popup_admin_menu() {
 
 
-    $hook_suffix = add_menu_page(__('Email Subscription', 'email-subscribe'), __('Email Subscription', 'email-subscribe'), 'es_email_subscribe_settings', 'email_subscription_popup', 'email_subscription_popup_admin_options');
+    $hook_suffix = add_menu_page(__('Email Subscription', 'email-subscribe'), __('Email Subscription', 'email-subscribe'), 'es_email_subscribe_settings', 'email_subscription_popup', 'email_subscription_popup_admin_options', 'dashicons-email-alt', 26);
     $hook_suffix = add_submenu_page('email_subscription_popup', __('Email Subscription Form Setting', 'email-subscribe'), __('Email Subscription Form Setting', 'email-subscribe'), 'es_email_subscribe_settings', 'email_subscription_popup', 'email_subscription_popup_admin_options');
     $hook_suffix_subscriber = add_submenu_page('email_subscription_popup', __('Manage Subscribers', 'email-subscribe'), __('Manage Subscribers', 'email-subscribe'), 'es_email_subscribe_view_subscribers', 'email_subscription_popup_subscribers_management', 'massEmailToEmail_Subscriber_Func');
     $hook_suffix_unsubscriber = add_submenu_page('email_subscription_popup', __('Unsubscribers List', 'email-subscribe'), __('Unsubscribers List', 'email-subscribe'), 'es_email_subscribe_view_unsubscribers', 'Newssletter-Email-Unsubscriber', 'email_subscription_unsubscribers_func');
     $hook_suffix_shortcode= add_submenu_page('email_subscription_popup', __('Email Subscribe Form Shortcode', 'email-subscribe'), __('Email Subscribe Form Shortcode', 'email-subscribe'), 'es_email_subscribe_view_shortcode', 'Newssletter-Email-Shortcode', 'email_subscription_shortcode_func');
+    add_submenu_page('email_subscription_popup', __('Mailchimp Sync', 'email-subscribe'), __('Mailchimp Sync', 'email-subscribe'), 'es_email_subscribe_settings', 'i13_es_mailchimp', 'i13_es_mailchimp_page');
 
     add_action('load-' . $hook_suffix, 'email_subscription_popup_admin_admin_init');
     add_action('load-' . $hook_suffix_subscriber, 'email_subscription_popup_admin_admin_init');
@@ -791,22 +905,24 @@ function email_subscription_unsubscribers_func() {
                 </div>
                 <div id="postbox-container-1" class="postbox-container" style="float:right;width:35%;margin-top: 50px" > 
 
-                    <div class="postbox"> 
-                        <center><h3 class="hndle"><span></span><?php echo __('New AI based DIVI Theme', 'email-subscribe'); ?></h3> </center>
-                        <div class="inside">
-                            <center><a href="https://www.elegantthemes.com/affiliates/idevaffiliate.php?id=11715&url=80806" target="_blank"><img border="0" src="<?php echo plugins_url('images/divi_300x250.jpg', __FILE__); ?>" width="250" height="250"></a></center>
-
-                            <div style="margin:10px 5px">
-
-                            </div>
-                        </div></div>
-                    <div class="postbox"> 
-                        <center><h3 class="hndle"><span></span><?php echo __('Google For Business', 'email-subscribe'); ?></h3> </center>
-                        <div class="inside">
-                            <center><a target="_blank" href="https://goo.gl/OJBuHT"><img style="max-width:350px" src="<?php echo plugins_url('images/g-suite-promo-code-4.png', __FILE__); ?>" width="" height="250" border="0"></a></center>
-                            <div style="margin:10px 5px">
-                            </div>
-                        </div></div>
+                    <!-- PRO Upsell Box -->
+                    <div class="postbox" style="border:2px solid #f0a500;">
+                        <div class="inside" style="padding:16px;">
+                            <h3 style="margin:0 0 10px;color:#f0a500;font-size:16px;">⭐ <?php _e('Upgrade to PRO','email-subscribe'); ?></h3>
+                            <ul style="margin:0 0 14px;padding-left:18px;font-size:13px;line-height:2;">
+                                <li><?php _e('🎨 <strong>6 new popup styles</strong> (Dark, Minimal, Split layout, Coupon reveal, Slide-in bar)','email-subscribe'); ?></li>
+                                <li><?php _e('📧 <strong>ESP Integrations</strong> — Mailchimp, Brevo, Kit, Klaviyo','email-subscribe'); ?></li>
+                                <li><?php _e('📊 <strong>Full analytics dashboard</strong> with growth charts','email-subscribe'); ?></li>
+                                <li><?php _e('🚀 <strong>Exit-intent trigger</strong>','email-subscribe'); ?></li>
+                                <li><?php _e('♾️ <strong>Unlimited subscribers</strong>','email-subscribe'); ?></li>
+                                <li><?php _e('📥 <strong>Unlimited import</strong>','email-subscribe'); ?></li>
+                            </ul>
+                            <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank"
+                                style="display:block;background:#f0a500;color:#fff;text-align:center;padding:10px;border-radius:4px;font-weight:700;text-decoration:none;font-size:14px;">
+                                <?php _e('Get PRO Version →','email-subscribe'); ?>
+                            </a>
+                        </div>
+                    </div>
 
                 </div>
                 <div class="clear"></div>             
@@ -1455,6 +1571,53 @@ function email_subscription_popup_admin_options() {
 
             }
         </style>
+        <?php
+        // Basic analytics for free version
+        global $wpdb;
+        $total_active = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}nl_subscriptions WHERE is_subscribed=1");
+        $total_unsub  = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}nl_subscriptions WHERE is_subscribed=0");
+        $new_today    = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}nl_subscriptions WHERE DATE(subscribed_on)=CURDATE()");
+        $pct_used     = min(100, round($total_active / I13_ES_FREE_SUBSCRIBER_LIMIT * 100));
+        $bar_color    = $pct_used >= 100 ? '#d63638' : ($pct_used >= 80 ? '#f0a500' : '#00a32a');
+        ?>
+        <!-- Basic Analytics Bar -->
+        <div style="background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:16px 20px;margin-bottom:16px;display:flex;gap:30px;align-items:center;flex-wrap:wrap;">
+            <div>
+                <div style="font-size:28px;font-weight:700;color:#1e1e1e;line-height:1;"><?php echo number_format($total_active); ?></div>
+                <div style="font-size:12px;color:#666;margin-top:3px;"><?php _e('Active Subscribers','email-subscribe'); ?></div>
+            </div>
+            <div>
+                <div style="font-size:28px;font-weight:700;color:#2271b1;line-height:1;"><?php echo number_format($new_today); ?></div>
+                <div style="font-size:12px;color:#666;margin-top:3px;"><?php _e('New Today','email-subscribe'); ?></div>
+            </div>
+            <div>
+                <div style="font-size:28px;font-weight:700;color:#888;line-height:1;"><?php echo number_format($total_unsub); ?></div>
+                <div style="font-size:12px;color:#666;margin-top:3px;"><?php _e('Unsubscribed','email-subscribe'); ?></div>
+            </div>
+            <div style="flex:1;min-width:150px;">
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-bottom:4px;">
+                    <span><?php _e('Free limit usage','email-subscribe'); ?></span>
+                    <span><?php echo $total_active; ?> / <?php echo I13_ES_FREE_SUBSCRIBER_LIMIT; ?></span>
+                </div>
+                <div style="background:#f0f0f1;border-radius:4px;height:8px;overflow:hidden;">
+                    <div style="height:8px;background:<?php echo $bar_color; ?>;width:<?php echo $pct_used; ?>%;border-radius:4px;transition:width 0.3s;"></div>
+                </div>
+                <?php if($pct_used >= 80): ?>
+                <div style="margin-top:4px;font-size:11px;color:<?php echo $bar_color; ?>;">
+                    <?php if($pct_used >= 100): ?>
+                    <?php _e('Limit reached!','email-subscribe'); ?> <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank" style="font-weight:600;"><?php _e('Upgrade to PRO','email-subscribe'); ?></a>
+                    <?php else: ?>
+                    <?php printf(__('%d%% used — ','email-subscribe'), $pct_used); ?><a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank"><?php _e('Upgrade for unlimited','email-subscribe'); ?></a>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div>
+                <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank" style="display:inline-block;background:#f0a500;color:#fff;padding:8px 14px;border-radius:4px;font-size:12px;font-weight:600;text-decoration:none;">⭐ <?php _e('Upgrade to PRO','email-subscribe'); ?></a>
+                <div style="font-size:10px;color:#888;margin-top:3px;text-align:center;"><?php _e('Unlimited subscribers + more styles','email-subscribe'); ?></div>
+            </div>
+        </div>
+
         <div style="width: 100%;">  
             <div style="float:left;width:65%;">
                 <div class="wrap">
@@ -1495,17 +1658,49 @@ function email_subscription_popup_admin_options() {
                                         fjs.parentNode.insertBefore(js, fjs);
                                     }(document, 'script', 'facebook-jssdk'));</script>
                             </td>
-                            <td>
-                                <a target="_blank" title="Donate" href="http://www.i13websolution.com/donate-wordpress_image_thumbnail.php">
-                                    <img id="help us for free plugin" height="30" width="90" src="<?php echo plugins_url('images/paypaldonate.jpg', __FILE__); ?>" border="0" alt="help us for free plugin" title="help us for free plugin">
-                                </a>
-                            </td>
                         </tr>
-                    </table> 
-                    <span><h3 style="color: blue;"><a target="_blank" href="https://www.i13websolution.com/product/wordpress-newsletter-subscription-pro-plugin/">UPGRADE TO PRO VERSION</a></h3></span>
+                    </table>
 
-                    <h2><?php echo __('Settings', 'email-subscribe'); ?></h2>
+                    <h2><?php echo __('Settings', 'email-subscribe'); ?> <a href="<?php echo admin_url('admin.php?page=i13_es_onboarding&preview=1'); ?>" style="font-size:12px;font-weight:400;color:#666;text-decoration:none;border:1px solid #ddd;padding:3px 10px;border-radius:3px;margin-left:10px;" title="<?php _e('Preview setup wizard','email-subscribe'); ?>">🧙 <?php _e('Setup Wizard','email-subscribe'); ?></a></h2>
                     <br>
+
+                    <?php
+                    // Upgrade prompt: show after 400 subscribers (approaching limit)
+                    global $wpdb;
+                    $sub_count = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}nl_subscriptions WHERE is_subscribed=1");
+                    $upgrade_dismissed = (int)get_option('i13_es_upgrade_dismissed', 0);
+                    $show_upgrade = ($sub_count >= 400 && (time() - $upgrade_dismissed) > 7 * DAY_IN_SECONDS);
+                    if($show_upgrade): ?>
+                    <div id="i13-upgrade-prompt" style="background:#fff8e5;border:1px solid #f0a500;border-left:4px solid #f0a500;border-radius:4px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <span style="font-size:22px;">🚀</span>
+                        <div style="flex:1;">
+                            <strong><?php printf(__('You have %d subscribers — approaching the free limit of %d!', 'email-subscribe'), $sub_count, I13_ES_FREE_SUBSCRIBER_LIMIT); ?></strong><br>
+                            <span style="font-size:12px;color:#666;"><?php _e('Upgrade to PRO for unlimited subscribers, 6 new popup styles, ESP integrations (Mailchimp, Brevo, Kit, Klaviyo), full analytics and exit-intent trigger.', 'email-subscribe'); ?></span>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank" class="button button-primary" style="background:#f0a500;border-color:#f0a500;">
+                                <?php _e('Upgrade to PRO →', 'email-subscribe'); ?>
+                            </a>
+                            <a href="#" class="button" onclick="fetch('<?php echo admin_url('admin-ajax.php'); ?>',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=i13_es_dismiss_upgrade&nonce=<?php echo wp_create_nonce('i13_es_dismiss'); ?>'});document.getElementById('i13-upgrade-prompt').style.display='none';return false;">
+                                <?php _e('Remind me later', 'email-subscribe'); ?>
+                            </a>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- PRO Feature Hints Bar -->
+                    <div style="background:#f0f6fc;border:1px solid #c3d9f5;border-radius:4px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:#2271b1;">
+                        <strong>🔒 <?php _e('PRO Features:', 'email-subscribe'); ?></strong>
+                        &nbsp;
+                        <span style="margin-right:12px;">📧 <?php _e('ESP Integrations', 'email-subscribe'); ?></span>
+                        <span style="margin-right:12px;">🎨 <?php _e('6 New Popup Styles', 'email-subscribe'); ?></span>
+                        <span style="margin-right:12px;">📊 <?php _e('Analytics Dashboard', 'email-subscribe'); ?></span>
+                        <span style="margin-right:12px;">🚀 <?php _e('Exit-Intent Trigger', 'email-subscribe'); ?></span>
+                        <span style="margin-right:12px;">♾️ <?php _e('Unlimited Subscribers', 'email-subscribe'); ?></span>
+                        &nbsp;
+                        <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank" style="font-weight:600;color:#f0a500;"><?php _e('Get PRO →', 'email-subscribe'); ?></a>
+                    </div>
+
                     <div id="poststuff">
                         <div id="post-body" class="metabox-holder columns-2">
                             <div id="post-body-content">
@@ -1634,7 +1829,7 @@ function email_subscription_popup_admin_options() {
                                                                 </tr>
                                                                 <tr>
                                                                     <td class="label" style="width:35%">
-                                                                        <h3 style="font-size: 13px"><label for="show_agreement"><?php echo __('Show Checkbox For Terms and Conditions Agreement', 'email-subscribe'); ?> <span class="required">*</span></label></h3>
+                                                                        <h3 style="font-size: 13px" id="gdpr"><label for="show_agreement"><?php echo __('Show Checkbox For Terms and Conditions Agreement', 'email-subscribe'); ?> <span class="required">*</span></label> <span style="background:#00a32a;color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;vertical-align:middle;">GDPR</span></h3>
                                                                     </td>
                                                                     <td class="value" style="width:65%">
                                                                         <select id="show_agreement" name="show_agreement" class="select">
@@ -1996,24 +2191,54 @@ function email_subscription_popup_admin_options() {
                 </div>      
             </div>
             <div id="postbox-container-1" class="postbox-container" style="float:right;width:35%;margin-top: 50px" > 
-
-                <div class="postbox"> 
-                    <center><h3 class="hndle"><span></span><?php echo __('New AI based DIVI Theme', 'email-subscribe'); ?></h3> </center>
-                    <div class="inside">
-                        <center><a href="https://www.elegantthemes.com/affiliates/idevaffiliate.php?id=11715&url=80806" target="_blank"><img border="0" src="<?php echo plugins_url('images/divi_300x250.jpg', __FILE__); ?>" width="250" height="250"></a></center>
-
-                        <div style="margin:10px 5px">
-
+                <!-- PRO Popup Styles Preview in sidebar -->
+                <div class="postbox" style="margin-bottom:12px;">
+                    <div class="inside" style="padding:12px;">
+                        <h3 style="margin:0 0 8px;font-size:13px;">🔒 <?php _e('PRO Popup Styles','email-subscribe'); ?></h3>
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;">
+                            <?php
+                            $pro_styles = array(
+                                array('name'=>'Dark / Night',   'icon'=>'🌙', 'color'=>'#1a1a2e', 'accent'=>'#e94560'),
+                                array('name'=>'Minimal Clean',  'icon'=>'✨', 'color'=>'#f5f5f5', 'accent'=>'#111111'),
+                                array('name'=>'Bold / Vibrant', 'icon'=>'🔥', 'color'=>'#fff',    'accent'=>'#ff6b35'),
+                                array('name'=>'Split + Image',  'icon'=>'🖼', 'color'=>'#4a90e2', 'accent'=>'#ffffff'),
+                                array('name'=>'Coupon Reveal',  'icon'=>'🎟', 'color'=>'#fff',    'accent'=>'#e74c3c'),
+                                array('name'=>'Slide-in Bar',   'icon'=>'📢', 'color'=>'#1a1a2e', 'accent'=>'#e94560'),
+                            );
+                            foreach($pro_styles as $s): ?>
+                            <div style="border:1px solid #dcdcde;border-radius:4px;overflow:hidden;cursor:pointer;" onclick="window.open('<?php echo I13_ES_PRO_URL; ?>','_blank')">
+                                <div style="background:<?php echo $s['color']; ?>;padding:10px 8px;height:55px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;">
+                                    <div style="font-size:16px;"><?php echo $s['icon']; ?></div>
+                                    <div style="background:<?php echo $s['accent']; ?>;color:#fff;font-size:8px;padding:2px 6px;border-radius:2px;"><?php _e('Subscribe','email-subscribe'); ?></div>
+                                </div>
+                                <div style="padding:3px 6px;background:#fafafa;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:10px;color:#333;"><?php echo $s['name']; ?></span>
+                                    <span style="font-size:9px;background:#f0a500;color:#fff;padding:1px 4px;border-radius:2px;">PRO</span>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
-                    </div></div>
-                <div class="postbox"> 
-                    <center><h3 class="hndle"><span></span><?php echo __('Google For Business', 'email-subscribe'); ?></h3> </center>
-                    <div class="inside">
-                        <center><a target="_blank" href="https://goo.gl/OJBuHT"><img style="max-width:350px" src="<?php echo plugins_url('images/g-suite-promo-code-4.png', __FILE__); ?>" width="" height="250" border="0"></a></center>
-                        <div style="margin:10px 5px">
-                        </div>
-                    </div></div>
-
+                        <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank" style="display:block;background:#f0a500;color:#fff;text-align:center;padding:8px;border-radius:4px;font-weight:700;text-decoration:none;font-size:12px;">
+                            🔓 <?php _e('Unlock All Styles →','email-subscribe'); ?>
+                        </a>
+                    </div>
+                </div>
+                <div class="postbox" style="border:2px solid #f0a500;">
+                    <div class="inside" style="padding:16px;">
+                        <h3 style="margin:0 0 10px;color:#f0a500;font-size:16px;">⭐ <?php _e('Upgrade to PRO','email-subscribe'); ?></h3>
+                        <ul style="margin:0 0 14px;padding-left:18px;font-size:13px;line-height:2;">
+                            <li><?php _e('🎨 6 new popup styles','email-subscribe'); ?></li>
+                            <li><?php _e('📧 ESP Integrations (Mailchimp, Brevo, Kit, Klaviyo)','email-subscribe'); ?></li>
+                            <li><?php _e('📊 Full analytics dashboard','email-subscribe'); ?></li>
+                            <li><?php _e('🚀 Exit-intent trigger','email-subscribe'); ?></li>
+                            <li><?php _e('♾️ Unlimited subscribers','email-subscribe'); ?></li>
+                        </ul>
+                        <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank"
+                            style="display:block;background:#f0a500;color:#fff;text-align:center;padding:10px;border-radius:4px;font-weight:700;text-decoration:none;font-size:14px;">
+                            <?php _e('Get PRO Version →','email-subscribe'); ?>
+                        </a>
+                    </div>
+                </div>
             </div>
             <div class="clear"></div></div>  
     <?php
@@ -2235,14 +2460,9 @@ function massEmailToEmail_Subscriber_Func() {
                                     fjs.parentNode.insertBefore(js, fjs);
                                 }(document, 'script', 'facebook-jssdk'));</script>
                         </td>
-                        <td>
-                            <a target="_blank" title="Donate" href="http://www.i13websolution.com/donate-wordpress_image_thumbnail.php">
-                                <img id="help us for free plugin" height="30" width="90" src="<?php echo plugins_url('images/paypaldonate.jpg', __FILE__); ?>" border="0" alt="help us for free plugin" title="help us for free plugin">
-                            </a>
-                        </td>
                     </tr>
                 </table> 
-                <span><h3 style="color: blue;"><a target="_blank" href="https://www.i13websolution.com/product/wordpress-newsletter-subscription-pro-plugin/">UPGRADE TO PRO VERSION</a></h3></span>
+                
 
                 <h3><?php echo __('Send Email To Newsletter Subscribers', 'email-subscribe'); ?> </h3>  
                 <?php $url = plugin_dir_url(__FILE__); ?> 
@@ -2446,14 +2666,9 @@ function massEmailToEmail_Subscriber_Func() {
                                                 fjs.parentNode.insertBefore(js, fjs);
                                             }(document, 'script', 'facebook-jssdk'));</script>
                                     </td>
-                                    <td>
-                                        <a target="_blank" title="Donate" href="http://www.i13websolution.com/donate-wordpress_image_thumbnail.php">
-                                            <img id="help us for free plugin" height="30" width="90" src="<?php echo plugins_url('images/paypaldonate.jpg', __FILE__); ?>" border="0" alt="help us for free plugin" title="help us for free plugin">
-                                        </a>
-                                    </td>
                                 </tr>
                             </table> 
-                            <span><h3 style="color: blue;"><a target="_blank" href="https://www.i13websolution.com/product/wordpress-newsletter-subscription-pro-plugin/">UPGRADE TO PRO VERSION</a></h3></span>
+                            
 
                             <h3><?php echo __('Send Email To Newsletter Subscribers', 'email-subscribe'); ?></h3>
                     <?php
@@ -2702,22 +2917,22 @@ function massEmailToEmail_Subscriber_Func() {
                     </div>
                     <div id="postbox-container-1" class="postbox-container" style="float:right;width:35%;margin-top: 50px" > 
 
-                        <div class="postbox"> 
-                            <center><h3 class="hndle"><span></span><?php echo __('Access All Themes In One Price', 'email-subscribe'); ?></h3> </center>
-                            <div class="inside">
-                                <center><a href="https://www.elegantthemes.com/affiliates/idevaffiliate.php?id=11715&url=80806" target="_blank"><img border="0" src="<?php echo plugins_url('images/divi_300x250.jpg', __FILE__); ?>" width="250" height="250"></a></center>
-
-                                <div style="margin:10px 5px">
-
-                                </div>
-                            </div></div>
-                        <div class="postbox"> 
-                            <center><h3 class="hndle"><span></span><?php echo __('Google For Business', 'email-subscribe'); ?></h3> </center>
-                            <div class="inside">
-                                <center><a target="_blank" href="https://goo.gl/OJBuHT"><img style="max-width:350px" src="<?php echo plugins_url('images/g-suite-promo-code-4.png', __FILE__); ?>" width="" height="250" border="0"></a></center>
-                                <div style="margin:10px 5px">
-                                </div>
-                            </div></div>
+                    <div class="postbox" style="border:2px solid #f0a500;">
+                        <div class="inside" style="padding:16px;">
+                            <h3 style="margin:0 0 10px;color:#f0a500;font-size:16px;">⭐ <?php _e('Upgrade to PRO','email-subscribe'); ?></h3>
+                            <ul style="margin:0 0 14px;padding-left:18px;font-size:13px;line-height:2;">
+                                <li><?php _e('🎨 6 new popup styles','email-subscribe'); ?></li>
+                                <li><?php _e('📧 ESP Integrations (Mailchimp, Brevo, Kit, Klaviyo)','email-subscribe'); ?></li>
+                                <li><?php _e('📊 Full analytics dashboard','email-subscribe'); ?></li>
+                                <li><?php _e('🚀 Exit-intent trigger','email-subscribe'); ?></li>
+                                <li><?php _e('♾️ Unlimited subscribers','email-subscribe'); ?></li>
+                            </ul>
+                            <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank"
+                                style="display:block;background:#f0a500;color:#fff;text-align:center;padding:10px;border-radius:4px;font-weight:700;text-decoration:none;font-size:14px;">
+                                <?php _e('Get PRO Version →','email-subscribe'); ?>
+                            </a>
+                        </div>
+                    </div>
 
                     </div>
                     <div class="clear">
@@ -2925,11 +3140,11 @@ function print_email_subscribe_form_func($instance) {
     $wp_news_letter_settings = stripslashes_deep($wp_news_letter_settings);
     ?>
 
-            <div class="<?php echo $rand; ?>_AjaxLoader ajaxLoaderWidget"  id="<?php echo $rand; ?>_AjaxLoader"><img src="<?php echo $loader; ?>"/><?php echo $WaitMessage; ?></div>
-            <div class="<?php echo $rand; ?>_myerror_msg myerror_msg" id="<?php echo $rand; ?>_myerror_msg"></div>         
-            <div class="<?php echo $rand; ?>_mysuccess_msg mysuccess_msg" id="<?php echo $rand; ?>_mysuccess_msg"></div>
             <div class="Nknewsletter_description"><?php echo $Subheading; ?></div>
             <div class="Nknewsletter-widget">
+                <div class="<?php echo $rand; ?>_AjaxLoader ajaxLoaderWidget" id="<?php echo $rand; ?>_AjaxLoader" style="margin-bottom:8px;"><img src="<?php echo $loader; ?>"/><?php echo $WaitMessage; ?></div>
+                <div class="<?php echo $rand; ?>_myerror_msg myerror_msg" id="<?php echo $rand; ?>_myerror_msg"></div>
+                <div class="<?php echo $rand; ?>_mysuccess_msg mysuccess_msg" id="<?php echo $rand; ?>_mysuccess_msg"></div>
                 <input type="text" name="<?php echo $rand; ?>_youremail" id="<?php echo $rand; ?>_youremail" class="Nknewsletter_email"  value="<?php echo $EmailLabel; ?>" onfocus="return clearInput(this, '<?php echo $EmailLabel; ?>');" onblur="restoreInput(this, '<?php echo $EmailLabel; ?>')"/>
                 <div class="" id="<?php echo $rand; ?>_errorinput_email"></div>
 
@@ -3535,6 +3750,14 @@ class nksnewslettersubscriber extends WP_Widget {
                     $name = sanitize_text_field($_POST['name']);
                     $name = esc_html($name);
 
+                    // Free version subscriber limit check
+                    $current_count = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}nl_subscriptions WHERE is_subscribed=1");
+                    if ( $current_count >= I13_ES_FREE_SUBSCRIBER_LIMIT ) {
+                        $wp_news_letter_settings = get_option('wp_news_letter_settings');
+                        echo $wp_news_letter_settings['success_msg']; // Show success to user but do not store
+                        die();
+                    }
+
                     if (is_email($email)) {
 
 
@@ -3564,6 +3787,8 @@ class nksnewslettersubscriber extends WP_Widget {
                                         array('name' => $name, 'email' => $email, 'subscribed_on' => $subscribed_on, 'is_subscribed' => 1, 'unsubs_key' => $key),
                                         array('%s', '%s', '%s', '%d', '%s')
                                 );
+                                // Fire action for Mailchimp sync
+                                do_action('i13_es_subscriber_added', $email, $name);
                                 echo 'success|' . $wp_news_letter_settings['success'];
                             } catch (Exception $e) {
 
@@ -3586,3 +3811,367 @@ class nksnewslettersubscriber extends WP_Widget {
             die;
         }
         ?>
+<?php
+// ═══════════════════════════════════════════════════════════════════════════
+// FEATURE 1: GDPR — Already built into plugin settings. Highlighted in UI.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FEATURE 2: MAILCHIMP SYNC (Free — limited to 100 syncs/month)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function i13_es_mailchimp_page() {
+    if ( ! current_user_can('es_email_subscribe_settings') ) wp_die('Access Denied');
+
+    $api_key  = get_option('i13_es_mc_api_key', '');
+    $list_id  = get_option('i13_es_mc_list_id', '');
+    $enabled  = get_option('i13_es_mc_enabled', '0');
+    $synced   = (int) get_option('i13_es_mc_synced_this_month', 0);
+    $sync_limit = 100;
+    ?>
+    <div class="wrap">
+        <h1><?php _e('Mailchimp Sync', 'email-subscribe'); ?> <span style="background:#f0a500;color:#fff;font-size:11px;padding:3px 8px;border-radius:3px;vertical-align:middle;">FREE — 100 syncs/month</span></h1>
+        <p style="color:#666;"><?php _e('Automatically sync new subscribers to your Mailchimp audience. Free version is limited to 100 syncs per month.', 'email-subscribe'); ?>
+        <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank" style="color:#f0a500;font-weight:600;"><?php _e('Upgrade to PRO for unlimited syncs + Brevo, Kit, Klaviyo', 'email-subscribe'); ?></a></p>
+
+        <!-- Sync usage bar -->
+        <?php $pct = min(100, round($synced / $sync_limit * 100)); $bar_col = $pct >= 100 ? '#d63638' : ($pct >= 80 ? '#f0a500' : '#00a32a'); ?>
+        <div style="background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:16px 20px;margin-bottom:20px;max-width:600px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;">
+                <span><?php _e('Monthly syncs used','email-subscribe'); ?></span>
+                <span style="color:<?php echo $bar_col; ?>;font-weight:600;"><?php echo $synced; ?> / <?php echo $sync_limit; ?></span>
+            </div>
+            <div style="background:#f0f0f1;border-radius:4px;height:8px;">
+                <div style="height:8px;background:<?php echo $bar_col; ?>;width:<?php echo $pct; ?>%;border-radius:4px;"></div>
+            </div>
+            <?php if($pct >= 100): ?>
+            <p style="color:#d63638;font-size:12px;margin:6px 0 0;"><?php _e('Monthly limit reached. Resets on the 1st of next month. Or ', 'email-subscribe'); ?><a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank"><?php _e('upgrade to PRO for unlimited.', 'email-subscribe'); ?></a></p>
+            <?php endif; ?>
+        </div>
+
+        <!-- Settings form -->
+        <div style="background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:20px;max-width:600px;">
+            <table class="form-table">
+                <tr>
+                    <th><?php _e('Enable Mailchimp Sync','email-subscribe'); ?></th>
+                    <td>
+                        <select id="i13_mc_enabled">
+                            <option value="1" <?php selected($enabled,'1'); ?>><?php _e('Yes','email-subscribe'); ?></option>
+                            <option value="0" <?php selected($enabled,'0'); ?>><?php _e('No','email-subscribe'); ?></option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label><?php _e('Mailchimp API Key','email-subscribe'); ?></label><br><small style="font-weight:400;color:#888;"><?php _e('Found in Mailchimp → Account → Extras → API Keys','email-subscribe'); ?></small></th>
+                    <td><input type="text" id="i13_mc_api_key" value="<?php echo esc_attr($api_key); ?>" style="width:100%;max-width:400px;" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1" /></td>
+                </tr>
+                <tr>
+                    <th><label><?php _e('Audience List ID','email-subscribe'); ?></label><br><small style="font-weight:400;color:#888;"><?php _e('Found in Mailchimp → Audience → Settings → Audience name and defaults','email-subscribe'); ?></small></th>
+                    <td><input type="text" id="i13_mc_list_id" value="<?php echo esc_attr($list_id); ?>" style="width:200px;" placeholder="abc123def" /></td>
+                </tr>
+            </table>
+            <p>
+                <button class="button button-primary" onclick="i13McSave()"><?php _e('Save Settings','email-subscribe'); ?></button>
+                &nbsp;
+                <button class="button" onclick="i13McTest()"><?php _e('Test Connection','email-subscribe'); ?></button>
+                <span id="i13_mc_msg" style="margin-left:10px;font-size:13px;"></span>
+            </p>
+        </div>
+
+        <!-- PRO upsell -->
+        <div style="background:#fff8e5;border:1px solid #f0a500;border-radius:6px;padding:16px 20px;margin-top:16px;max-width:600px;">
+            <strong><?php _e('Want more ESPs?','email-subscribe'); ?></strong>
+            <?php _e('PRO version includes Brevo, Kit (ConvertKit) and Klaviyo integrations with unlimited syncs, double opt-in and tag support.','email-subscribe'); ?>
+            <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank" style="display:inline-block;margin-top:8px;background:#f0a500;color:#fff;padding:6px 14px;border-radius:4px;font-weight:600;text-decoration:none;"><?php _e('Upgrade to PRO →','email-subscribe'); ?></a>
+        </div>
+    </div>
+    <script>
+    function i13McSave(){
+        var msg = document.getElementById('i13_mc_msg');
+        msg.textContent = '<?php _e('Saving...','email-subscribe'); ?>';
+        var fd = new FormData();
+        fd.append('action','i13_es_mailchimp_save');
+        fd.append('nonce','<?php echo wp_create_nonce('i13_mc_nonce'); ?>');
+        fd.append('api_key', document.getElementById('i13_mc_api_key').value);
+        fd.append('list_id', document.getElementById('i13_mc_list_id').value);
+        fd.append('enabled', document.getElementById('i13_mc_enabled').value);
+        fetch('<?php echo admin_url('admin-ajax.php'); ?>', {method:'POST',body:fd})
+            .then(r=>r.json()).then(r=>{
+                msg.textContent = r.success ? '<?php _e('Saved!','email-subscribe'); ?>' : (r.data || '<?php _e('Error saving','email-subscribe'); ?>');
+                msg.style.color = r.success ? '#00a32a' : '#d63638';
+            });
+    }
+    function i13McTest(){
+        var msg = document.getElementById('i13_mc_msg');
+        msg.textContent = '<?php _e('Testing...','email-subscribe'); ?>';
+        var fd = new FormData();
+        fd.append('action','i13_es_mailchimp_test');
+        fd.append('nonce','<?php echo wp_create_nonce('i13_mc_nonce'); ?>');
+        fd.append('api_key', document.getElementById('i13_mc_api_key').value);
+        fd.append('list_id', document.getElementById('i13_mc_list_id').value);
+        fetch('<?php echo admin_url('admin-ajax.php'); ?>', {method:'POST',body:fd})
+            .then(r=>r.json()).then(r=>{
+                msg.textContent = r.success ? '<?php _e('Connection successful!','email-subscribe'); ?>' : (r.data || '<?php _e('Connection failed','email-subscribe'); ?>');
+                msg.style.color = r.success ? '#00a32a' : '#d63638';
+            });
+    }
+    </script>
+    <?php
+}
+
+function i13_es_mailchimp_save() {
+    check_ajax_referer('i13_mc_nonce','nonce');
+    if(!current_user_can('es_email_subscribe_settings')) wp_send_json_error('Access denied');
+    update_option('i13_es_mc_api_key', sanitize_text_field($_POST['api_key']));
+    update_option('i13_es_mc_list_id', sanitize_text_field($_POST['list_id']));
+    update_option('i13_es_mc_enabled',  sanitize_text_field($_POST['enabled']));
+    wp_send_json_success();
+}
+
+function i13_es_mailchimp_test() {
+    check_ajax_referer('i13_mc_nonce','nonce');
+    $api_key = sanitize_text_field($_POST['api_key']);
+    $list_id = sanitize_text_field($_POST['list_id']);
+    if(empty($api_key)) { wp_send_json_error(__('Please enter an API key','email-subscribe')); }
+    $dc = substr($api_key, strpos($api_key,'-')+1);
+    $response = wp_remote_get("https://{$dc}.api.mailchimp.com/3.0/lists/{$list_id}", array(
+        'headers' => array('Authorization' => 'Basic '.base64_encode('user:'.$api_key)),
+        'timeout' => 10,
+    ));
+    if(is_wp_error($response)) { wp_send_json_error($response->get_error_message()); }
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    if(isset($body['id'])) {
+        wp_send_json_success(sprintf(__('Connected to audience: %s (%d subscribers)','email-subscribe'), $body['name'], $body['stats']['member_count']));
+    } else {
+        wp_send_json_error($body['detail'] ?? __('Invalid API key or List ID','email-subscribe'));
+    }
+}
+
+// Hook new subscriber into Mailchimp after successful subscription
+add_action('i13_es_subscriber_added', 'i13_es_sync_to_mailchimp', 10, 2);
+function i13_es_sync_to_mailchimp($email, $name) {
+    if(get_option('i13_es_mc_enabled') !== '1') return;
+    $api_key = get_option('i13_es_mc_api_key','');
+    $list_id = get_option('i13_es_mc_list_id','');
+    if(empty($api_key) || empty($list_id)) return;
+
+    // Check monthly limit
+    $month_key = 'i13_es_mc_synced_'.date('Y_m');
+    $synced = (int) get_option($month_key, 0);
+    if($synced >= 100) return; // Free limit
+
+    $dc = substr($api_key, strpos($api_key,'-')+1);
+    $names = explode(' ', $name, 2);
+    wp_remote_post("https://{$dc}.api.mailchimp.com/3.0/lists/{$list_id}/members", array(
+        'headers' => array(
+            'Authorization' => 'Basic '.base64_encode('user:'.$api_key),
+            'Content-Type'  => 'application/json',
+        ),
+        'body'    => json_encode(array(
+            'email_address' => $email,
+            'status'        => 'subscribed',
+            'merge_fields'  => array(
+                'FNAME' => isset($names[0]) ? $names[0] : $name,
+                'LNAME' => isset($names[1]) ? $names[1] : '',
+            ),
+        )),
+        'timeout' => 10,
+    ));
+    update_option($month_key, $synced + 1);
+    // Keep backward compat key
+    update_option('i13_es_mc_synced_this_month', $synced + 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FEATURE 3: ONBOARDING WIZARD
+// ═══════════════════════════════════════════════════════════════════════════
+
+function i13_es_maybe_redirect_onboarding() {
+    if ( get_option('i13_es_show_onboarding') && ! get_option('i13_es_onboarding_done') ) {
+        delete_option('i13_es_show_onboarding');
+        wp_safe_redirect( admin_url('admin.php?page=i13_es_onboarding') );
+        exit;
+    }
+}
+
+function i13_es_dismiss_onboarding() {
+    check_ajax_referer('i13_es_dismiss','nonce');
+    update_option('i13_es_onboarding_done', 1);
+    wp_send_json_success();
+}
+
+// Register onboarding page (hidden from menu)
+add_action('admin_menu', 'i13_es_register_onboarding_page');
+function i13_es_register_onboarding_page() {
+    add_submenu_page(null, __('Setup Email Subscribe','email-subscribe'), '', 'es_email_subscribe_settings', 'i13_es_onboarding', 'i13_es_onboarding_page');
+}
+
+function i13_es_onboarding_page() {
+    if(!current_user_can('es_email_subscribe_settings')) wp_die('Access Denied');
+    // Only mark done if not a preview
+    if( empty($_GET['preview']) ) {
+        update_option('i13_es_onboarding_done', 1);
+    }
+    $settings_url  = admin_url('admin.php?page=email_subscription_popup');
+    $mailchimp_url = admin_url('admin.php?page=i13_es_mailchimp');
+    ?>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title><?php _e('Welcome to Email Subscribe!','email-subscribe'); ?></title>
+        <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #f0f0f1; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        .i13-ob-wrap { max-width: 680px; margin: 40px auto; }
+        .i13-ob-header { background: linear-gradient(135deg, #2271b1, #135e96); color: #fff; border-radius: 8px 8px 0 0; padding: 32px 40px; text-align: center; }
+        .i13-ob-header h1 { font-size: 26px; margin-bottom: 8px; }
+        .i13-ob-header p { opacity: 0.85; font-size: 15px; }
+        .i13-ob-body { background: #fff; border-radius: 0 0 8px 8px; padding: 32px 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .i13-ob-step { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #f0f0f1; align-items: flex-start; }
+        .i13-ob-step:last-of-type { border-bottom: none; }
+        .i13-ob-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .i13-ob-icon.blue { background: #e8f0fb; }
+        .i13-ob-icon.green { background: #e8f8ef; }
+        .i13-ob-icon.orange { background: #fff8e5; }
+        .i13-ob-step h3 { font-size: 15px; margin-bottom: 4px; }
+        .i13-ob-step p { font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 8px; }
+        .i13-ob-btn { display: inline-block; padding: 7px 16px; border-radius: 4px; font-size: 13px; font-weight: 500; text-decoration: none; cursor: pointer; border: 1px solid #2271b1; color: #2271b1; background: #fff; }
+        .i13-ob-btn:hover { background: #f0f6ff; }
+        .i13-ob-btn.primary { background: #2271b1; color: #fff; }
+        .i13-ob-btn.primary:hover { background: #135e96; }
+        .i13-ob-footer { text-align: center; margin-top: 24px; }
+        .i13-ob-pro { background: #fff8e5; border: 1px solid #f0a500; border-radius: 6px; padding: 16px 20px; margin-top: 20px; }
+        .i13-ob-pro h3 { color: #f0a500; margin-bottom: 8px; }
+        .i13-ob-features { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; font-size: 13px; }
+        </style>
+    </head>
+    <body>
+    <div class="i13-ob-wrap">
+        <div class="i13-ob-header">
+            <div style="font-size:48px;margin-bottom:12px;">📧</div>
+            <h1><?php _e('Welcome to Email Subscribe!','email-subscribe'); ?></h1>
+            <p><?php _e('You are 3 steps away from growing your email list. Let us get you set up quickly.','email-subscribe'); ?></p>
+        </div>
+        <div class="i13-ob-body">
+
+            <!-- Step 1 -->
+            <div class="i13-ob-step">
+                <div class="i13-ob-icon blue">⚙️</div>
+                <div style="flex:1;">
+                    <h3><?php _e('Step 1 — Configure your popup','email-subscribe'); ?></h3>
+                    <p><?php _e('Set your heading, subheading, button text, and choose when the popup appears. Takes less than 2 minutes.','email-subscribe'); ?></p>
+                    <a href="<?php echo $settings_url; ?>" class="i13-ob-btn primary"><?php _e('Go to Settings →','email-subscribe'); ?></a>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="i13-ob-step">
+                <div class="i13-ob-icon green">📧</div>
+                <div style="flex:1;">
+                    <h3><?php _e('Step 2 — Connect Mailchimp (optional)','email-subscribe'); ?></h3>
+                    <p><?php _e('Automatically sync new subscribers to your Mailchimp audience. Free up to 100 syncs per month.','email-subscribe'); ?></p>
+                    <a href="<?php echo $mailchimp_url; ?>" class="i13-ob-btn"><?php _e('Setup Mailchimp →','email-subscribe'); ?></a>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="i13-ob-step">
+                <div class="i13-ob-icon orange">🔒</div>
+                <div style="flex:1;">
+                    <h3><?php _e('Step 3 — Enable GDPR checkbox (recommended)','email-subscribe'); ?></h3>
+                    <p><?php _e('Add a consent checkbox to your popup for GDPR compliance. Go to Settings and enable "Show Checkbox For Terms and Conditions Agreement".','email-subscribe'); ?></p>
+                    <a href="<?php echo $settings_url; ?>#gdpr" class="i13-ob-btn"><?php _e('Enable GDPR →','email-subscribe'); ?></a>
+                </div>
+            </div>
+
+            <!-- PRO upsell -->
+            <div class="i13-ob-pro">
+                <h3>⭐ <?php _e('Get even more with PRO','email-subscribe'); ?></h3>
+                <div class="i13-ob-features">
+                    <span>🎨 <?php _e('6 beautiful popup styles','email-subscribe'); ?></span>
+                    <span>📊 <?php _e('Full analytics dashboard','email-subscribe'); ?></span>
+                    <span>📧 <?php _e('Brevo, Kit & Klaviyo sync','email-subscribe'); ?></span>
+                    <span>🚀 <?php _e('Exit-intent trigger','email-subscribe'); ?></span>
+                    <span>♾️ <?php _e('Unlimited subscribers','email-subscribe'); ?></span>
+                    <span>📥 <?php _e('Unlimited CSV import','email-subscribe'); ?></span>
+                </div>
+                <a href="<?php echo I13_ES_PRO_URL; ?>" target="_blank" style="display:inline-block;background:#f0a500;color:#fff;padding:9px 20px;border-radius:4px;font-weight:700;text-decoration:none;">
+                    <?php _e('Get PRO Version →','email-subscribe'); ?>
+                </a>
+            </div>
+
+            <div class="i13-ob-footer">
+                <a href="<?php echo $settings_url; ?>" style="color:#888;font-size:13px;"><?php _e('Skip and go to settings','email-subscribe'); ?></a>
+            </div>
+        </div>
+    </div>
+    </body>
+    </html>
+    <?php
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GUTENBERG BLOCK — Email Subscribe Form
+// ═══════════════════════════════════════════════════════════════════════════
+
+add_action('init', 'i13_es_register_block');
+function i13_es_register_block() {
+    if ( ! function_exists('register_block_type') ) return; // Gutenberg not available
+
+    // Register block script
+    wp_register_script(
+        'i13-es-block',
+        plugins_url('blocks/block.js', __FILE__),
+        array('wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n'),
+        '1.0',
+        true
+    );
+
+    // Register the block with server-side rendering — all params
+    register_block_type('email-subscribe/form', array(
+        'editor_script'   => 'i13-es-block',
+        'render_callback' => 'i13_es_block_render',
+        'attributes'      => array(
+            'heading'              => array('type' => 'string',  'default' => ''),
+            'subheading'           => array('type' => 'string',  'default' => ''),
+            'emailLabel'           => array('type' => 'string',  'default' => ''),
+            'nameLabel'            => array('type' => 'string',  'default' => ''),
+            'submitButtonLabel'    => array('type' => 'string',  'default' => ''),
+            'requiredFieldMessage' => array('type' => 'string',  'default' => ''),
+            'invalidEmailMessage'  => array('type' => 'string',  'default' => ''),
+            'invalidRequestMessage'=> array('type' => 'string',  'default' => ''),
+            'emailExistMessage'    => array('type' => 'string',  'default' => ''),
+            'successMessage'       => array('type' => 'string',  'default' => ''),
+            'waitMessage'          => array('type' => 'string',  'default' => ''),
+            'showName'             => array('type' => 'boolean', 'default' => true),
+            'showAgreement'        => array('type' => 'boolean', 'default' => false),
+            'agreementText'        => array('type' => 'string',  'default' => ''),
+            'agreementError'       => array('type' => 'string',  'default' => ''),
+        ),
+    ));
+}
+
+function i13_es_block_render( $attributes ) {
+    // Map block attributes to shortcode instance params
+    $instance = array(
+        'heading'              => ! empty($attributes['heading'])              ? $attributes['heading']              : '',
+        'subheading'           => ! empty($attributes['subheading'])           ? $attributes['subheading']           : '',
+        'emaillabel'           => ! empty($attributes['emailLabel'])           ? $attributes['emailLabel']           : '',
+        'namelabel'            => ! empty($attributes['nameLabel'])            ? $attributes['nameLabel']            : '',
+        'submitbuttonlabel'    => ! empty($attributes['submitButtonLabel'])    ? $attributes['submitButtonLabel']    : '',
+        'requiredfieldmessage' => ! empty($attributes['requiredFieldMessage']) ? $attributes['requiredFieldMessage'] : '',
+        'invalidemailmessage'  => ! empty($attributes['invalidEmailMessage'])  ? $attributes['invalidEmailMessage']  : '',
+        'invalidrequestmessage'=> ! empty($attributes['invalidRequestMessage'])? $attributes['invalidRequestMessage']: '',
+        'emailexistmessage'    => ! empty($attributes['emailExistMessage'])    ? $attributes['emailExistMessage']    : '',
+        'successmessage'       => ! empty($attributes['successMessage'])       ? $attributes['successMessage']       : '',
+        'waitmessage'          => ! empty($attributes['waitMessage'])          ? $attributes['waitMessage']          : '',
+        'shownamefield'        => ! empty($attributes['showName'])             ? 1 : 0,
+        'show_agreement'       => ! empty($attributes['showAgreement'])        ? 1 : 0,
+        'agreement_text'       => ! empty($attributes['agreementText'])        ? $attributes['agreementText']        : '',
+        'agreement_error'      => ! empty($attributes['agreementError'])       ? $attributes['agreementError']       : '',
+    );
+
+    // Reuse existing shortcode function
+    return print_email_subscribe_form_func($instance);
+}
