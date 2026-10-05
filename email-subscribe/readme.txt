@@ -2,14 +2,14 @@
 Contributors: nik00726
 Tags: newsletter, email subscription, popup, gutenberg block, mailchimp, GDPR, subscription form, email marketing, newsletter popup, widget
 Requires at least: 5.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.2
-Version: 1.2.28
-Stable tag: 1.2.28
+Version: 1.2.29
+Stable tag: 1.2.29
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Grow your email list with a beautiful newsletter popup, Gutenberg block, widget and Mailchimp sync. GDPR ready. Free forever.
+Add a newsletter signup popup to WordPress with a native Gutenberg block, GDPR consent checkbox, and free Mailchimp sync — no coding, set up in minutes.
 
 == Description ==
 
@@ -151,6 +151,12 @@ Visit [i13websolution.com/contacts](https://www.i13websolution.com/contacts)
 
 == Changelog ==
 
+= 1.2.29 =
+* New: Mobile Popup Behaviour setting (Smart / Disable / Same as desktop) to avoid Google's mobile "intrusive interstitials" ranking penalty.
+* Smart mode (default): on phones the automatic popup never appears on the landing page and only shows after the visitor scrolls and spends time on the page. Desktop behaviour is unchanged. Click-triggered popups (shownewsletterbox class) still open on all devices.
+* New: Automatically registers its scripts as "Delay JS" exclusions in LiteSpeed Cache (incl. Guest Mode), WP Rocket and Perfmatters when an automatic popup is enabled — no manual cache settings needed.
+* Improved: The popup now waits for jQuery when a cache plugin loads it late, instead of failing silently.
+
 = 1.2.28 =
 * Added Gutenberg block — drag and drop subscription form anywhere in the block editor
 * Added Mailchimp integration — sync new subscribers automatically (100/month free)
@@ -265,6 +271,9 @@ Visit [i13websolution.com/contacts](https://www.i13websolution.com/contacts)
 * Initial stable release
 
 == Upgrade Notice ==
+
+= 1.2.29 =
+Mobile SEO update — the popup no longer covers the page as soon as a mobile visitor arrives from Google, avoiding the "intrusive interstitials" ranking penalty. Also fixes the popup not appearing with LiteSpeed Cache / WP Rocket "Delay JS". Recommended for all users.
 
 = 1.2.28 =
 Major update — adds Gutenberg block, Mailchimp integration, onboarding wizard and analytics. Recommended for all users.

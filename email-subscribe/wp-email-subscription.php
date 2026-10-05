@@ -5,7 +5,7 @@
   Author URI:https://www.i13websolution.com/
   Description: This is beautiful email subscription modal popup plugin for wordpress.Each time new user visit your site user will see modal popup for email subscription.Even you can setup email subscription form by widget.
   Author:I Thirteen Web Solution
-  Version:1.2.28
+  Version:1.2.29
   Text Domain:email-subscribe
   Domain Path: /languages
  */
@@ -32,6 +32,53 @@ if (!is_admin()) {
     add_action('wp_footer', 'addModalPopupHtmlToWpFooter');
 }
 add_action('wp_head', 'unsubscribe_user_func');
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Cache / optimisation plugin compatibility (1.2.29)
+ * "Delay JS" features hold scripts until the visitor interacts, so the timed
+ * popup never appears. Register our scripts (and the jQuery they need) as
+ * exclusions automatically when an automatic popup is enabled.
+ * Developers can adjust the list with the 'i13_es_cache_exclusions' filter.
+ * ────────────────────────────────────────────────────────────────────────── */
+function i13_es_cache_exclusion_list() {
+    static $list = null;
+    if ($list !== null) return $list;
+
+    $list = array();
+    $opt  = get_option('wp_news_letter_settings');
+    if (!is_array($opt)) return $list;
+
+    $show_on = isset($opt['newsletter_show_on']) ? $opt['newsletter_show_on'] : 'none';
+    if ($show_on !== 'any' && $show_on !== 'home') return $list; // click-only → let optimisers delay everything
+
+    $js_path = wp_parse_url(plugins_url('js/', __FILE__), PHP_URL_PATH); // e.g. /wp-content/plugins/email-subscribe/js/
+    $list = array(
+        'js_files' => array_filter(array($js_path, 'jquery.min.js', 'jquery-migrate')),
+        'inline'   => array('i13EspMobileCfg', 'fancybox_ns', 'newsLatterPopup'),
+    );
+    $list = apply_filters('i13_es_cache_exclusions', $list);
+    return $list;
+}
+function i13_es_cache_exclusions_merge($existing, $with_inline = true) {
+    $l = i13_es_cache_exclusion_list();
+    if (empty($l)) return $existing;
+    $add = $l['js_files'];
+    if ($with_inline) $add = array_merge($add, $l['inline']);
+    if (is_string($existing)) {
+        return trim($existing . "\n" . implode("\n", $add));
+    }
+    return array_values(array_unique(array_merge((array) $existing, $add)));
+}
+if (!is_admin()) {
+    // LiteSpeed Cache — JS Deferred/Delayed Excludes + Guest Mode JS Excludes
+    add_filter('litespeed_optm_js_defer_exc', 'i13_es_cache_exclusions_merge');
+    add_filter('litespeed_optm_gm_js_exc',    'i13_es_cache_exclusions_merge');
+    // WP Rocket — Delay JavaScript Execution + Load JavaScript Deferred
+    add_filter('rocket_delay_js_exclusions', 'i13_es_cache_exclusions_merge');
+    add_filter('rocket_exclude_defer_js', function ($ex) { return i13_es_cache_exclusions_merge($ex, false); });
+    // Perfmatters — Delay JavaScript
+    add_filter('perfmatters_delay_js_exclusions', 'i13_es_cache_exclusions_merge');
+}
 add_action('wp_ajax_getEmailTemplate', 'getEmailTemplate');
 add_action('widgets_init', 'nksnewslettersubscriberSet');
 add_action('wp_ajax_store_email', 'store_email_callback');
@@ -419,7 +466,11 @@ function install_email_subscription_popup_admin() {
         'agreement_text' => 'I agree to <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>',
         'agreement_error' => 'Please read and agree to our terms & conditions.',
         'additional_css' => '',
-        'centerOnScroll' => '0'
+        'centerOnScroll' => '0',
+        'mobile_popup_mode' => 'smart',
+        'mobile_skip_landing' => 1,
+        'mobile_scroll_percent' => 40,
+        'mobile_min_delay' => 8
     );
 
     $existingopt = get_option('wp_news_letter_settings');
@@ -466,6 +517,15 @@ function install_email_subscription_popup_admin() {
         if (!isset($existingopt['centerOnScroll'])) {
             $flag = true;
             $existingopt['centerOnScroll'] = '0';
+        }
+
+        // 1.2.29 — Google "intrusive interstitials" safe mobile defaults
+        if (!isset($existingopt['mobile_popup_mode'])) {
+            $flag = true;
+            $existingopt['mobile_popup_mode'] = 'smart';
+            $existingopt['mobile_skip_landing'] = 1;
+            $existingopt['mobile_scroll_percent'] = 40;
+            $existingopt['mobile_min_delay'] = 8;
         }
 
         if ($flag == true) {
@@ -1142,7 +1202,86 @@ function addModalPopupHtmlToWpFooter() {
 
             </div>      
         </div>                     
-        <script type='text/javascript'>
+        <?php
+        $i13_m_mode   = isset($wp_news_letter_settings['mobile_popup_mode']) && in_array($wp_news_letter_settings['mobile_popup_mode'], array('smart', 'same', 'disable'), true) ? $wp_news_letter_settings['mobile_popup_mode'] : 'smart';
+        $i13_m_skip   = isset($wp_news_letter_settings['mobile_skip_landing']) ? (int) $wp_news_letter_settings['mobile_skip_landing'] : 1;
+        $i13_m_scroll = isset($wp_news_letter_settings['mobile_scroll_percent']) ? max(0, min(100, (int) $wp_news_letter_settings['mobile_scroll_percent'])) : 40;
+        $i13_m_delay  = isset($wp_news_letter_settings['mobile_min_delay']) ? max(0, (int) $wp_news_letter_settings['mobile_min_delay']) : 8;
+        ?>
+        <script type='text/javascript' data-no-optimize="1" data-no-defer="1" data-cfasync="false" nowprocket>
+            /* ── Mobile gate: avoids Google's "intrusive interstitials" mobile ranking penalty (1.2.29) ── */
+            var i13EspMobileCfg = {
+                mode       : '<?php echo esc_js($i13_m_mode); ?>',
+                skipLanding: <?php echo $i13_m_skip ? 'true' : 'false'; ?>,
+                scrollPct  : <?php echo (int) $i13_m_scroll; ?>,
+                minDelay   : <?php echo (int) $i13_m_delay; ?>
+            };
+            // Session page-view counter (session cookie) — first page of a visit = landing page
+            var i13EspPV = (function(){
+                try{
+                    var k = 'i13EsFreePV';
+                    var m = document.cookie.match(new RegExp('(?:^|; )' + k + '=(\\d+)'));
+                    var n = m ? parseInt(m[1], 10) + 1 : 1;
+                    document.cookie = k + '=' + n + '; path=/; SameSite=Lax';
+                    return n;
+                }catch(e){ return 1; }
+            })();
+            function i13EspIsMobile(){
+                try{
+                    if(window.matchMedia){
+                        if(window.matchMedia('(max-width: 767px)').matches) return true;
+                        if(window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(max-width: 1024px)').matches) return true;
+                        return false;
+                    }
+                }catch(e){}
+                return /Mobi|Android|iPhone|iPod/i.test(navigator.userAgent);
+            }
+            function i13EspIsLandingPage(){
+                if(i13EspPV <= 1) return true;
+                try{
+                    if(document.referrer){
+                        var a = document.createElement('a');
+                        a.href = document.referrer;
+                        if(a.hostname && a.hostname !== window.location.hostname) return true; // arrived from Google / another site
+                    }
+                }catch(e){}
+                return false;
+            }
+            // Schedules the AUTOMATIC popup. Desktop = unchanged. Click-triggered popups are never gated.
+            function i13EspScheduleAutoPopup(ms, fire){
+                var cfg = i13EspMobileCfg;
+                if(cfg.mode === 'same' || !i13EspIsMobile()){ setTimeout(fire, ms); return; }
+                if(cfg.mode === 'disable') return;
+                if(cfg.skipLanding && i13EspIsLandingPage()) return; // cookie NOT set — shows on a later page
+
+                var wait = Math.max(ms, cfg.minDelay * 1000);
+                var timeOk = false, scrollOk = (cfg.scrollPct <= 0), done = false;
+                function scrolledPct(){
+                    var d = document.documentElement, b = document.body;
+                    var max = Math.max(d.scrollHeight, b ? b.scrollHeight : 0) - window.innerHeight;
+                    if(max <= 50) return -1;
+                    var y = window.pageYOffset || d.scrollTop || 0;
+                    return (y / max) * 100;
+                }
+                function check(){
+                    if(done) return;
+                    if(!scrollOk && scrolledPct() >= cfg.scrollPct) scrollOk = true;
+                    if(timeOk && scrollOk){
+                        done = true;
+                        window.removeEventListener('scroll', check);
+                        fire();
+                    }
+                }
+                setTimeout(function(){
+                    timeOk = true;
+                    if(!scrollOk && scrolledPct() === -1){
+                        setTimeout(function(){ scrollOk = true; check(); }, wait);
+                        return;
+                    }
+                    check();
+                }, wait);
+                window.addEventListener('scroll', check, { passive: true });
+            }
 
             var htmlpopup = '';
 
@@ -1314,7 +1453,8 @@ function addModalPopupHtmlToWpFooter() {
 
             var <?php echo $intval; ?> = setInterval(function () {
 
-                if (document.readyState === 'complete') {
+                // Also wait for jQuery, fancybox and cookie helpers: cache plugins (LiteSpeed "Delayed", WP Rocket, etc.) may load them late
+                if (document.readyState === 'complete' && window.jQuery && jQuery.fancybox_ns && typeof readCookie === 'function' && typeof createCookie === 'function') {
 
                     clearInterval(<?php echo $intval; ?>);
                     /* if ( jQuery.browser.msie && jQuery.browser.version >= 9 )
@@ -1351,8 +1491,10 @@ function addModalPopupHtmlToWpFooter() {
 
                             if (readCookie('newsLatterPopup') == null) {
 
-                                setTimeout(function () {
+                                i13EspScheduleAutoPopup(1500, function () {
 
+                                    if (readCookie('newsLatterPopup') != null) return;
+                                    if (jQuery('#fancybox_ns-wrap').is(':visible')) return;
                                     jQuery.fancybox_ns({
 
                                         'overlayColor': '#000000',
@@ -1371,7 +1513,7 @@ function addModalPopupHtmlToWpFooter() {
 
                                     createCookie('newsLatterPopup', 'donotshow', <?php echo $wp_news_letter_settings['newsletter_cookie']; ?>);
 
-                                }, 1500);
+                                });
 
 
                             }
@@ -1383,7 +1525,10 @@ function addModalPopupHtmlToWpFooter() {
 
                                 if (readCookie('newsLatterPopup') == null) {
 
+                                  i13EspScheduleAutoPopup(0, function () {
 
+                                    if (readCookie('newsLatterPopup') != null) return;
+                                    if (jQuery('#fancybox_ns-wrap').is(':visible')) return;
                                     jQuery.fancybox_ns({
 
                                         'overlayColor': '#000000',
@@ -1401,6 +1546,8 @@ function addModalPopupHtmlToWpFooter() {
 
 
                                     createCookie('newsLatterPopup', 'donotshow', <?php echo $wp_news_letter_settings['newsletter_cookie']; ?>);
+
+                                  });
 
                                 }
                             });
@@ -1466,6 +1613,11 @@ function email_subscription_popup_admin_options() {
         $options['unsubscribe_message'] = trim(htmlentities(sanitize_text_field($_POST['unsubscribe_message']), ENT_QUOTES));
         $options['show_name_field'] = trim(htmlentities(sanitize_text_field($_POST['show_name_field']), ENT_QUOTES));
         $options['centerOnScroll'] = trim(htmlentities(sanitize_text_field($_POST['centerOnScroll']), ENT_QUOTES));
+        $i13_m_mode = isset($_POST['mobile_popup_mode']) ? sanitize_text_field(wp_unslash($_POST['mobile_popup_mode'])) : 'smart';
+        $options['mobile_popup_mode']     = in_array($i13_m_mode, array('smart', 'same', 'disable'), true) ? $i13_m_mode : 'smart';
+        $options['mobile_skip_landing']   = isset($_POST['mobile_skip_landing']) ? 1 : 0;
+        $options['mobile_scroll_percent'] = max(0, min(100, intval(isset($_POST['mobile_scroll_percent']) ? $_POST['mobile_scroll_percent'] : 40)));
+        $options['mobile_min_delay']      = max(0, min(300, intval(isset($_POST['mobile_min_delay']) ? $_POST['mobile_min_delay'] : 8)));
         $options['show_agreement'] = trim(htmlentities(sanitize_text_field($_POST['show_agreement']), ENT_QUOTES));
         
         $default_attribs = array(
@@ -1825,6 +1977,52 @@ function email_subscription_popup_admin_options() {
                                                                         </select> 
                                                                         <div style="clear:both"></div>
                                                                         <div class="error_label"></div> 
+                                                                    </td>
+                                                                </tr>
+                                                                <?php
+                                                                $i13_m_mode   = isset($wp_news_letter_settings['mobile_popup_mode']) ? $wp_news_letter_settings['mobile_popup_mode'] : 'smart';
+                                                                $i13_m_skip   = isset($wp_news_letter_settings['mobile_skip_landing']) ? (int) $wp_news_letter_settings['mobile_skip_landing'] : 1;
+                                                                $i13_m_scroll = isset($wp_news_letter_settings['mobile_scroll_percent']) ? (int) $wp_news_letter_settings['mobile_scroll_percent'] : 40;
+                                                                $i13_m_delay  = isset($wp_news_letter_settings['mobile_min_delay']) ? (int) $wp_news_letter_settings['mobile_min_delay'] : 8;
+                                                                ?>
+                                                                <tr>
+                                                                    <td class="label" style="width:35%; vertical-align:top;">
+                                                                        <h3 style="font-size: 13px; color:#00a32a;"><?php echo __('Mobile Popup Behaviour (SEO safe)', 'email-subscribe'); ?></h3>
+                                                                        <p style="font-size:12px;color:#666;margin-top:4px;"><?php echo __('Controls the automatic popup on phones so it does not trigger Google\'s mobile "intrusive interstitials" ranking penalty. Desktop is not affected.', 'email-subscribe'); ?></p>
+                                                                    </td>
+                                                                    <td class="value" style="width:65%">
+                                                                        <label style="display:block;margin-bottom:6px;font-size:13px;cursor:pointer;">
+                                                                            <input type="radio" name="mobile_popup_mode" value="smart" style="width:auto;margin:0 6px 0 0;" onclick="document.getElementById('i13MobileSmartRow').style.display=''" <?php checked($i13_m_mode, 'smart'); ?>>
+                                                                            <strong><?php echo __('Smart (recommended)', 'email-subscribe'); ?></strong> — <?php echo __('show only after the visitor has engaged with the page', 'email-subscribe'); ?>
+                                                                        </label>
+                                                                        <label style="display:block;margin-bottom:6px;font-size:13px;cursor:pointer;">
+                                                                            <input type="radio" name="mobile_popup_mode" value="disable" style="width:auto;margin:0 6px 0 0;" onclick="document.getElementById('i13MobileSmartRow').style.display='none'" <?php checked($i13_m_mode, 'disable'); ?>>
+                                                                            <?php echo __('Disable automatic popup on mobile', 'email-subscribe'); ?>
+                                                                        </label>
+                                                                        <label style="display:block;margin-bottom:6px;font-size:13px;cursor:pointer;">
+                                                                            <input type="radio" name="mobile_popup_mode" value="same" style="width:auto;margin:0 6px 0 0;" onclick="document.getElementById('i13MobileSmartRow').style.display='none'" <?php checked($i13_m_mode, 'same'); ?>>
+                                                                            <?php echo __('Same as desktop (old behaviour — not recommended)', 'email-subscribe'); ?>
+                                                                        </label>
+                                                                        <div id="i13MobileSmartRow" style="margin:12px 0 0 22px;<?php echo ($i13_m_mode !== 'smart') ? 'display:none;' : ''; ?>">
+                                                                            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;margin-bottom:10px;">
+                                                                                <input type="checkbox" name="mobile_skip_landing" value="1" style="width:16px;height:16px;margin:0;" <?php checked($i13_m_skip, 1); ?>>
+                                                                                <?php echo __('Never show on the landing page (the first page a visitor opens from Google or another site)', 'email-subscribe'); ?>
+                                                                            </label><br>
+                                                                            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-bottom:10px;">
+                                                                                <?php echo __('Show after scrolling', 'email-subscribe'); ?>
+                                                                                <input type="number" name="mobile_scroll_percent" min="0" max="100" value="<?php echo $i13_m_scroll; ?>" style="width:70px;">
+                                                                                <?php echo __('% of the page (0 = no scroll needed)', 'email-subscribe'); ?>
+                                                                            </label><br>
+                                                                            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;">
+                                                                                <?php echo __('Minimum time on page', 'email-subscribe'); ?>
+                                                                                <input type="number" name="mobile_min_delay" min="0" max="300" value="<?php echo $i13_m_delay; ?>" style="width:70px;">
+                                                                                <?php echo __('seconds', 'email-subscribe'); ?>
+                                                                            </label>
+                                                                        </div>
+                                                                        <div style="margin-top:12px; background:#edfaef; border-left:3px solid #00a32a; padding:10px 14px; border-radius:0 4px 4px 0; font-size:12px; line-height:1.7;">
+                                                                            <strong><?php echo __('Why this matters:', 'email-subscribe'); ?></strong>
+                                                                            <?php echo __('Google can rank a page lower in mobile search when a popup covers the content right after a visitor arrives from search results. With Smart mode the popup still appears for engaged visitors, just not on arrival. Buttons/links with the "shownewsletterbox" class always open the popup on click.', 'email-subscribe'); ?>
+                                                                        </div>
                                                                     </td>
                                                                 </tr>
                                                                 <tr>
